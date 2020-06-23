@@ -3,7 +3,7 @@
 % by Anders Rantzer and Stephen Prajna
 
 %Author: Jared Miller 6/22/20
-SOLVE = 1;
+SOLVE = 0;
 PLOT = 1;
 
 if SOLVE
@@ -13,6 +13,9 @@ if SOLVE
 
     %d = 2*2;  %degree of relaxation
     d0 = input('order of relaxation ='); d = 2*d0;
+    %d0 = 5;
+    d = 2*d0;
+    
     T = 20;   %final time
     R = 5;    %radius to contain dynamics
     %dynamics are time-independent
@@ -51,7 +54,7 @@ if SOLVE
         t*(1-t) >= 0, tp*(1 - tp) >= 0, t0 == 0];
 
     %function to optimize
-    cost = (xp(1)+1)^2 + (xp(2)+1)^2;
+    cost = (xp(1)+1)^2 + (xp(2)+1)^2 - 0.25;
     objective = min(cost);
 
     %Input LMI moment problem
@@ -60,13 +63,35 @@ if SOLVE
 
     %solve LMIP moment problem
     [status, obj] = msol(P);
-    radius_out = sqrt(obj);
+    
+    
+    %extract solutions
+    radius_out = sqrt(obj + 0.25);
+    M0 = double(mmat(mu0));
+    Mp = double(mmat(mup));
+    
+    %1, t, x1, x2
+    M0_1 = M0(1:4, 1:4);
+    Mp_1 = Mp(1:4, 1:4);
+    
+    rank0 = rank(Mp_1, 1e-4);
+    rankp = rank(M0_1, 1e-4);
+    
+    t0_out = double(mom(t0));
+    x0_out = double(mom(x0));
+    
+    tp_out = T*double(mom(tp));
+    xp_out = double(mom(xp));
+    %radius_out = sqrt(obj);
+    
+    
+    
 end
 
 if PLOT
     m = 4;
-    N = 30;
-    Nsample = 80;
+    N = 20;
+    Nsample = 40;
     [x, y] = meshgrid(linspace(-m, m, N));
 
     xdot = y;
@@ -105,12 +130,36 @@ if PLOT
     hold on
     
     plot(X0(1, :), X0(2, :), 'k', 'Linewidth', 3)
-    plot(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3)
+    patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
     plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
-    streamline(x, y, xdot, ydot, Xsample(1, :), Xsample(2, :))       
+    hlines_c0 = streamline(x, y, xdot, ydot, C0(1), C0(2));
+    hlines = streamline(x, y, xdot, ydot, Xsample(1, :), Xsample(2, :));
     
-    legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
+    set(hlines_c0, 'Color', 'c')
+    set(hlines, 'Color', 'c', 'HandleVisibility','off')
     
+    if rank0 == 1 && rankp == 1
+        %global optimum was found
+        hlines_p = streamline(x, y, xdot, ydot, x0_out(1), x0_out(2));
+        set(hlines_p, 'LineWidth', 2)
+        
+        MS = 200;
+        
+        scatter(xp_out(1), xp_out(2), MS, '*b', 'HandleVisibility','off', 'LineWidth', 2)
+        scatter(x0_out(1), x0_out(2), MS, 'ob', 'HandleVisibility','off', 'LineWidth', 2)
+        
+        legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories', 'Peak Traj.'}, 'location', 'northwest')
+        title(['Safety Margin for Trajectories = ', num2str(obj, 3), ' at time t=', num2str(tp_out, 3)])
+    else
+        legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
+        title(['Safety Margin for Trajectories = ', num2str(obj, 2)])
+    end
+    
+    
+    
+    
+    
+
     xlim([-m, m])
     ylim([-m, m])
     
@@ -118,7 +167,7 @@ if PLOT
     axis square
     xlabel('x')
     ylabel('y')
-    title('Safety Margin for Trajectories')
+    
 end
 
 function [X] = circle_sample(N)
