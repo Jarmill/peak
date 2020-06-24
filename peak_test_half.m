@@ -6,14 +6,37 @@
 SOLVE = 1;
 PLOT = 1;
 
+ranktol = 5e-3;
+
+%unsafe set
+%half circle: intersection of disk and half-plane through circle center
+
+%circle
+Cu = [0; -1];
+Ru = 0.4;
+c1f = @(x, y) Ru^2 - (x - Cu(1)).^2 - (y - Cu(2)).^2;
+
+
+%line
+%tilt angle
+theta_c = 5*pi/4;
+%theta_c = 3*pi/2;    
+%theta_c = 7*pi/4;
+
+%theta_c = 0;
+
+w_c = [cos(theta_c); sin(theta_c)];
+c2f = @(x, y) w_c(1)*(x - Cu(1)) + w_c(2) * (y - Cu(2)); 
+
+
 if SOLVE
     mset clear
     mset('yalmip',true);
     mset(sdpsettings('solver', 'mosek'));
 
     %d = 2*2;  %degree of relaxation
-    d0 = input('order of relaxation ='); d = 2*d0;
-    %d0 = 5;
+    %d0 = input('order of relaxation ='); d = 2*d0;
+    d0 = 5;
     d = 2*d0;
     
     T = 20;   %final time
@@ -41,22 +64,46 @@ if SOLVE
     Ay = mom(diff(v, t) + diff(v, x)*f); 
     Liou = Ay + (y0 - yp);
 
-    mom_con = [Liou == 0; mass(mu0)==1];
 
-
+    
+    
+    
+    %function to optimize
+    
+    %minimize the maximum of multiple functions
+    
+    %circle        
+    cost_1 = mom(Ru^2 - (xp(1)-Cu(1))^2 - (xp(2)-Cu(2))^2);
+    
+    %line
+    cost_2 = mom(w_c'*(xp- Cu));
+    
+    %new variable c    
+    mpol('c'); muc = meas(c);            
+    cm = mom(c);
+    
+    c_range = [-10, 10];
+    
+    
+    
     %Support Constraints
     X  = [x'*x <= R^2];
     Xp = [xp'*xp <= R^2];
-    X0 = [(x0(1)-1.5)^2 + x0(2)^2 <= 0.25];
+    X0 = [(x0(1)-1.5)^2 + x0(2)^2 <= 0.25]; 
+    Xc = [-(c - c_range(1))*(c - c_range(2))>=0];
+   
+   
+    
 
     %bounds on trajectory
-    supp_con = [X0, X, Xp, ...
+    supp_con = [X0, X, Xp, Xc, ...
         t*(1-t) >= 0, tp*(1 - tp) >= 0, t0 == 0];
 
-    %function to optimize
-    cost = 0.25 - (xp(1)+1)^2 - (xp(2)+1)^2;
-    %cost = -xp(2);
-    objective = max(cost);
+    cost_mom = [cm <= cost_1; cm <= cost_2; mass(muc)==1];        
+    mom_con = [Liou == 0; mass(mu0)==1; cost_mom];
+
+    
+    objective = max(cm);
 
     %Input LMI moment problem
     P = msdp(objective, ...
@@ -67,22 +114,28 @@ if SOLVE
     
     
     %extract solutions
-    radius_out = sqrt(-obj + 0.25);
+    radius_out = sqrt(-obj + Ru^2);
     M0 = double(mmat(mu0));
     Mp = double(mmat(mup));
+    Mc = double(mmat(muc));
     
     %1, t, x1, x2
     M0_1 = M0(1:4, 1:4);
     Mp_1 = Mp(1:4, 1:4);
+    Mc_1 = Mc(1:2, 1:2);
     
-    rank0 = rank(Mp_1, 1e-4);
-    rankp = rank(M0_1, 1e-4);
+    
+    rank0 = rank(Mp_1, ranktol);
+    rankp = rank(M0_1, ranktol);
+    rankc = rank(Mc_1, ranktol);
     
     t0_out = double(mom(t0));
     x0_out = double(mom(x0));
     
     tp_out = T*double(mom(tp));
     xp_out = double(mom(xp));
+    
+    c_out = double(cm);
     %radius_out = sqrt(obj);
     
     
@@ -91,7 +144,7 @@ end
 
 if PLOT
     m = 4;
-    N = 20;
+    N = 30;
     Nsample = 40;
     [x, y] = meshgrid(linspace(-m, m, N));
 
@@ -103,6 +156,8 @@ if PLOT
     %initial and unsafe sets
     theta = linspace(0, 2*pi, 100);
     circ = [cos(theta); sin(theta)];
+    %half_theta = linspace(pi/2, 3*pi/2, 100);
+    %half_circ = [cos(half_theta); sin(half_theta)];
     
     %initial set
     C0 = [1.5; 0];
@@ -114,17 +169,33 @@ if PLOT
     rng(33, 'twister')
 
     Xsample = C0 + circle_sample(Nsample)' * R0;
+            
+    if theta_c > pi
+        theta_c = theta_c - 2 * pi;
+    end
+    
+    theta_half_range = linspace(theta_c-pi/2, theta_c + pi/2, 200);
+    circ_half = [cos(theta_half_range); sin(theta_half_range)];
+    Xu = Cu + circ_half* Ru;
+    
+    %expanded set Xu    
+    phi = asin(-obj/radius_out);
+    
+    th_new_top = phi + theta_c + pi/2; 
+    th_new_bot = pi - phi + theta_c + pi/2;
+    
+    if th_new_top > pi
+        th_new_top = th_new_top - 2*pi;
+        th_new_bot = th_new_bot - 2*pi;
+    end
+    
+    theta_new_range = linspace(th_new_bot, th_new_top + 2*pi, 200);
+    circ_margin = [cos(theta_new_range); sin(theta_new_range)];
+    Xmargin = Cu + circ_margin*radius_out;
     
     
     
-    %unsafe set
-    Cu = [-1; -1];
-    Ru = 0.4;
-    
-    Xu = Cu + circ*Ru;            
-    Xmargin = Cu + circ*radius_out;
-    
-
+    Xmargin_corner = Cu + circ_margin([1,2],[1,200])*radius_out;
     
     figure(1)
     clf
@@ -132,7 +203,11 @@ if PLOT
     
     plot(X0(1, :), X0(2, :), 'k', 'Linewidth', 3)
     patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
+    
+    
     plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
+    plot(Xmargin_corner(1, :), Xmargin_corner(2, :), 'r--', 'Linewidth', 3,   'HandleVisibility','off')
+    
     hlines_c0 = streamline(x, y, xdot, ydot, C0(1), C0(2));
     hlines = streamline(x, y, xdot, ydot, Xsample(1, :), Xsample(2, :));
     
@@ -150,7 +225,7 @@ if PLOT
         scatter(x0_out(1), x0_out(2), MS, 'ob', 'HandleVisibility','off', 'LineWidth', 2)
         
         legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories', 'Peak Traj.'}, 'location', 'northwest')
-        title(['Safety Margin for Trajectories = ', num2str(obj, 3), ' at time t=', num2str(tp_out, 3)])
+        title(['Safety Margin for Trajectories = ', num2str(obj, 3), ' at time t = ', num2str(tp_out, 3)])
     else
         legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
         title(['Safety Margin for Trajectories = ', num2str(obj, 2)])
