@@ -67,7 +67,7 @@ if SOLVE
     
     
     %extract solutions
-    radius_out = sqrt(-obj + 0.25);
+    radius_out = sqrt(-obj + 0.16);
     M0 = double(mmat(mu0));
     Mp = double(mmat(mup));
     
@@ -90,7 +90,7 @@ if SOLVE
 end
 
 if PLOT
-    m = 4;
+    m = 3;
     N = 20;
     Nsample = 40;
     [x, y] = meshgrid(linspace(-m, m, N));

@@ -27,7 +27,7 @@ Lv = jacobian(v, t) + jacobian(v, x) * f;
 
 %objective
 %maximize, get close to center of unsafe region as possible
-px =  0.25 - (x(1)+1)^2 + (x(2)+1)^2;
+px =  0.16 - (x(1)+1)^2 + (x(2)+1)^2;
 
 %Initial set
 gX0 = (0.25 - (x(1)-1.5)^2 + x(2)^2);
@@ -51,12 +51,20 @@ obj = -gamma;
 %mu:     Lv(x,t) <= 0          t in [0,T], x in X
 %mup:    v(x,t) >= p(x)        t in [0,T], x in X
 
+% %initial conditions
+% cons = [sos(gamma - replace(v, t, 0) - gX0*sx0), sos(sx0)];
+% %dynamics
+% cons = [cons, sos(-Lv - gt*stf - gX*sxf), sos(stf), sos(sxf)];
+% %peak
+% cons = [cons, sos(v - px - gt*stp - gX*sxf), sos(stp), sos(sxp)];
+
 %initial conditions
-cons = [sos(gamma - replace(v, t, 0) - gX0*sx0), sos(sx0)];
+cons = [sos(replace(v, t, 0) - gamma - gX0*sx0), sos(sx0)];
 %dynamics
-cons = [cons, sos(-Lv - gt*stf - gX*sxf), sos(stf), sos(sxf)];
+cons = [cons, sos(Lv - gt*stf - gX*sxf), sos(stf), sos(sxf)];
 %peak
-cons = [cons, sos(v - px - gt*stp - gX*sxf), sos(stp), sos(sxp)];
+cons = [cons, sos(-px - v - gt*stp - gX*sxf), sos(stp), sos(sxp)];
 
 
-solvesos(cons, obj, opts, [cv; cx0; ctf; cxf; ctp; cxp; gamma]);
+
+solvesos(cons, obj, opts, [cv; cx0; ctf; cxf; ctp; cxp], gamma);

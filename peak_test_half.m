@@ -13,6 +13,7 @@ ranktol = 5e-3;
 
 %circle
 Cu = [0; -1];
+%Cu = [2.5; 0];
 Ru = 0.4;
 c1f = @(x, y) Ru^2 - (x - Cu(1)).^2 - (y - Cu(2)).^2;
 
@@ -20,11 +21,11 @@ c1f = @(x, y) Ru^2 - (x - Cu(1)).^2 - (y - Cu(2)).^2;
 %line
 %tilt angle
 %theta_c = 5*pi/4;
-%theta_c = 3*pi/4;
+theta_c = 3*pi/4;
 %theta_c = 3*pi/2;    
-theta_c = 7*pi/4;
+%theta_c = 7*pi/4;
 
-%theta_c = 0;
+theta_c = 0;
 
 w_c = [cos(theta_c); sin(theta_c)];
 c2f = @(x, y) w_c(1)*(x - Cu(1)) + w_c(2) * (y - Cu(2)); 
@@ -37,7 +38,7 @@ if SOLVE
 
     %d = 2*2;  %degree of relaxation
     %d0 = input('order of relaxation ='); d = 2*d0;
-    d0 = 5;
+    d0 = 6;
     d = 2*d0;
     
     T = 20;   %final time
@@ -237,8 +238,10 @@ if PLOT
     
     
 
-    xlim([-m, m])
-    ylim([-m, m])
+    %xlim([-m, m])
+    %ylim([-m, m])
+    xlim([-2, 3])
+    ylim([-2, 2])
     
     hold off
     axis square
