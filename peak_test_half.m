@@ -19,9 +19,10 @@ c1f = @(x, y) Ru^2 - (x - Cu(1)).^2 - (y - Cu(2)).^2;
 
 %line
 %tilt angle
-theta_c = 5*pi/4;
+%theta_c = 5*pi/4;
+%theta_c = 3*pi/4;
 %theta_c = 3*pi/2;    
-%theta_c = 7*pi/4;
+theta_c = 7*pi/4;
 
 %theta_c = 0;
 
