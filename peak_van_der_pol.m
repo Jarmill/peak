@@ -1,6 +1,4 @@
-% Try the peak estimation on a vector field
-% Dynamics from 'On Analysis and Synthesis of Safe Control Laws'
-% by Anders Rantzer and Stephen Prajna
+% Peak estimation of van der pol system
 
 %Author: Jared Miller 6/22/20
 SOLVE = 1;
@@ -24,9 +22,9 @@ if SOLVE
     mset(sdpsettings('solver', 'mosek'));
 
     %d = 2*2;  %degree of relaxation
-    %d0 = 6;
+    d0 = 5;
     %d0 = input('order of relaxation ='); d = 2*d0;
-    d0 = 10;
+    %d0 = 10;
     d = 2*d0;
     
     T = 20;   %final time
