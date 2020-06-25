@@ -1,7 +1,7 @@
 % Peak Estimation of SIR system
 
 %Author: Jared Miller 6/25/20
-SOLVE = 0;
+SOLVE = 1;
 PLOT = 1;
 
 %C0 = [1; 1];
@@ -15,11 +15,14 @@ I_max = 0.1;
 
 
 %test a sample trajectory
+T = 40;   %final time
+   
+
 fv = @(t, x) [-beta*x(1)*x(2); beta*x(1)*x(2) - gamma*x(2)];
 
-[tv, yv] = ode45(fv, [0, 20], [0.9, 0.1]);
+[tv, xv] = ode45(fv, [0, 20], [1-I_max, I_max]);
 
-cost_max_test = max(yv(:, 2));
+cost_max_test = max(xv(:, 2));
 
 if SOLVE
     mset clear
@@ -27,12 +30,11 @@ if SOLVE
     mset(sdpsettings('solver', 'mosek'));
 
     %d = 2*2;  %degree of relaxation
-    d0 = 6;
+    d0 = 4;
     %d0 = input('order of relaxation ='); d = 2*d0;
     %d0 = 10;
     d = 2*d0;
     
-    T = 40;   %final time
     R = 4;    %radius to contain dynamics
     %dynamics are time-independent
 
@@ -51,9 +53,8 @@ if SOLVE
     yp = mom(vp);
 
     %dynamics and cost
-    %scale all dynamics to [0, 1] to improve time scaling
-    %f = T*[x(2); mu_van*(1-x(1)^2)*x(2) - x(1)];
-    f = T * [-beta*x(1)*x(2); beta*x(1)*x(2) - gamma*x(2)];
+    %scale all dynamics to [0, 1] to improve time scaling    
+    f = [-beta*x(1)*x(2); beta*x(1)*x(2) - gamma*x(2)];
     
     %Liouville Equation 
     Ay = mom(diff(v, t) + diff(v, x)*f); 
@@ -73,8 +74,13 @@ if SOLVE
 
     %bounds on trajectory
     supp_con = [X0, X, Xp, ...
-        t*(1-t) >= 0, tp*(1 - tp) >= 0, t0 == 0];
+        t*(T-t) >= 0, tp*(T - tp) >= 0, t0 == 0];
 
+    %Scalings
+    scale(t, T); scale(tp, T); 
+    %scale(x, R); scale(x0, R); scale(xp, R)
+    
+    
     %function to optimize
     cost = xp(2);    
     objective = max(cost);
@@ -101,25 +107,24 @@ if SOLVE
     t0_out = double(mom(t0));
     x0_out = double(mom(x0));
     
-    tp_out = T*double(mom(tp));
+    tp_out = double(mom(tp));
     xp_out = double(mom(xp));    
     
 end
 
-if PLOT
-    N = 25;
-    Nsample = 80;
-        
+if PLOT        
     %sample from X0 
+    Nsample = 80;
+    
+    
     rng(33, 'twister')
-
-        Xsample = trap_sample(Nsample, I_max);    
-
-    
-           
-    
     X0_pts = [0, 1, 1-I_max, 0, 0;
           0, 0, I_max, I_max, 0];
+    
+    
+    Xsample = trap_sample(Nsample, I_max);    
+
+                   
     
         
     figure(1)
@@ -141,7 +146,7 @@ if PLOT
         end
     end 
     
-    scatter(Xsample(1, :), Xsample(2, :), 'k')
+    scatter(Xsample(1, :), Xsample(2, :), 'k', 'HandleVisibility','off')
     
     if rank0 == 1 && rankp == 1
         %global optimum was found
@@ -157,7 +162,7 @@ if PLOT
         scatter(x0_out(1), x0_out(2), MS, 'ob', 'HandleVisibility','off', 'LineWidth', 2)
         
         legend({'Initial Set', 'Upper Limit', 'Trajectories', 'Peak Traj.'}, 'location', 'northeast')
-        title(['Peak Infection Rate = ', num2str(obj, 3), ' order = ', num2str(d0)])
+        title(['Peak Infection Rate = ', num2str(obj, 3), ' at order = ', num2str(d0)])
     else
         %global optimum not certified
         legend({'Initial Set', 'Upper Limit', 'Trajectories'}, 'location', 'northeast')
@@ -203,7 +208,7 @@ if PLOT
         
         legend({'Initial Set', 'Upper Limit', 'Trajectories', 'Peak Traj.'}, 'location', 'northeast')
         
-        title(['Peak Infection Rate= ', num2str(obj, 3), ' at time t=', num2str(tp_out, 3)])
+        title(['Peak Infection Rate = ', num2str(obj, 3), ' at time = ', num2str(tp_out, 3)])
     else
         %global optimum not certified
         legend({'Initial Set', 'Upper Limit', 'Trajectories'}, 'location', 'northeast')        
@@ -211,8 +216,10 @@ if PLOT
     end
     
     %axis square
+    xlim([0, T])
+    ylim([0,1])
     xlabel('Time')
-    ylabel('Infection Rate ')
+    ylabel('Infected')
     pbaspect([2.25 1 1])
 
     

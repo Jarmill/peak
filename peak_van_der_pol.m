@@ -7,12 +7,15 @@ PLOT = 1;
 %C0 = [1; 1];
 C0 = [-0.5; -0.5];
 R0 = 0.5;
+
+T = 10;   %final time
+
 mu_van = 1;
 
 %test a sample trajectory
 fv = @(t, x) [x(2); mu_van *(1-x(1)^2)*x(2) - x(1)];
 
-[tv, yv] = ode45(fv, [0, 20], [-0.25, 0.25]);
+[tv, yv] = ode45(fv, [0, T], C0');
 
 cost_max_test = max(yv(:, 2));
 
@@ -27,7 +30,7 @@ if SOLVE
     %d0 = 10;
     d = 2*d0;
     
-    T = 20;   %final time
+    
     R = 4;    %radius to contain dynamics
     %dynamics are time-independent
 
@@ -45,9 +48,8 @@ if SOLVE
     y0 = mom(v0);
     yp = mom(vp);
 
-    %dynamics and cost
-    %scale all dynamics to [0, 1] to improve time scaling
-    f = T*[x(2); mu_van*(1-x(1)^2)*x(2) - x(1)];
+    %dynamics and cost    
+    f = [x(2); mu_van*(1-x(1)^2)*x(2) - x(1)];
     
     %Liouville Equation 
     Ay = mom(diff(v, t) + diff(v, x)*f); 
@@ -63,8 +65,12 @@ if SOLVE
 
     %bounds on trajectory
     supp_con = [X0, X, Xp, ...
-        t*(1-t) >= 0, tp*(1 - tp) >= 0, t0 == 0];
+        t*(T-t) >= 0, tp*(T - tp) >= 0, t0 == 0];
 
+    %Scalings
+    scale(t, T); scale(tp, T); scale(x, R); scale(x0, R); scale(xp, R)
+    
+    
     %function to optimize
     cost = xp(2);    
     objective = max(cost);
@@ -91,7 +97,7 @@ if SOLVE
     t0_out = double(mom(t0));
     x0_out = double(mom(x0));
     
-    tp_out = T*double(mom(tp));
+    tp_out = double(mom(tp));
     xp_out = double(mom(xp));    
     
 end
@@ -100,11 +106,11 @@ if PLOT
     m = 3.25;
     N = 30;
     Nsample = 40;
-    [x, y] = meshgrid(linspace(-m, m, N));
+    %[x, y] = meshgrid(linspace(-m, m, N));
 
     
-    xdot = y;    
-    ydot = mu_van*(1-x.^2).*y - x; 
+    %xdot = y;    
+    %ydot = mu_van*(1-x.^2).*y - x; 
     
     %xdot = mu_van*(x - x.^3/3 - y);
     %ydot = x / mu_van;
@@ -140,16 +146,36 @@ if PLOT
     hold on
     plot(X0_pts(1, :), X0_pts(2, :), 'k', 'Linewidth', 3)
     plot([-m, m], [upper_lim, upper_lim], 'r--', 'Linewidth', 3)
-    hlines_c0 = streamline(x, y, xdot, ydot, C0(1), C0(2));
-    hlines = streamline(x, y, xdot, ydot, Xsample(1, :), Xsample(2, :));
+    %hlines_c0 = streamline(x, y, xdot, ydot, C0(1), C0(2));
+    %hlines = streamline(x, y, xdot, ydot, Xsample(1, :), Xsample(2, :));
     
-    set(hlines_c0, 'Color', 'c')
-    set(hlines, 'Color', 'c', 'HandleVisibility','off')
+    %set(hlines_c0, 'Color', 'c')
+    %set(hlines, 'Color', 'c', 'HandleVisibility','off')
+    
+    
+    xtraj = cell(Nsample, 1);
+    for i = 1:Nsample
+        xtraj{i} = struct;
+        [xtraj{i}.t, xtraj{i}.x] = ode45(fv, [0, T], [Xsample(:, i)]);  
+        
+        if i == 1
+            plot(xtraj{i}.x(:, 1), xtraj{i}.x(:, 2), 'c')
+        else
+            plot(xtraj{i}.x(:, 1), xtraj{i}.x(:, 2), 'c', 'HandleVisibility','off')
+        end
+    end 
+    
     
     if rank0 == 1 && rankp == 1
         %global optimum was found
-        hlines_p = streamline(x, y, xdot, ydot, x0_out(1), x0_out(2));
-        set(hlines_p, 'LineWidth', 2)
+        %hlines_p = streamline(x, y, xdot, ydot, x0_out(1), x0_out(2));
+        %set(hlines_p, 'LineWidth', 2)
+        
+        xtraj_opt = struct;
+        [xtraj_opt.t, xtraj_opt.x] = ode45(fv, [0, T], x0_out);  
+        
+        plot(xtraj_opt.x(:, 1), xtraj_opt.x(:, 2), 'b', 'LineWidth', 2)
+        
         
         MS = 200;
         

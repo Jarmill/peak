@@ -1,7 +1,7 @@
 % Peak Estimation of SIR system
 
 %Author: Jared Miller 6/25/20
-SOLVE = 0;
+SOLVE = 1;
 PLOT = 1;
 
 %C0 = [1; 1];
@@ -19,7 +19,7 @@ fv = @(t, x) [-beta*x(1)*x(2); beta*x(1)*x(2) - gamma*x(2)];
 
 [tv, xv] = ode45(fv, [0, 20], [1-I_max, I_max]);
 
-cost_max_test = max(yv(:, 2));
+cost_max_test = max(xv(:, 2));
 
 if SOLVE
     mset clear
@@ -27,7 +27,7 @@ if SOLVE
     mset(sdpsettings('solver', 'mosek'));
 
     %d = 2*2;  %degree of relaxation
-    d0 = 6;
+    d0 = 2;
     %d0 = input('order of relaxation ='); d = 2*d0;
     %d0 = 10;
     d = 2*d0;
