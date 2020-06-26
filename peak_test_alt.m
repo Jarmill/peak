@@ -3,19 +3,19 @@
 % by Anders Rantzer and Stephen Prajna
 
 %Author: Jared Miller 6/22/20
-SOLVE = 1;
+SOLVE = 0;
 PLOT = 1;
-ISOSURFACE = 0;
-MD = 40; %mesh density
+ISOSURFACE = 1;
+MD = 40; %mesh density of isosurface plot
 
 
-T = 6;   %final time
+T = 10;   %final time
 
 %initial set
 %C0 = [1; 0.5];
 C0 = [1.5; 0];
-%R0 = 0.5;
-R0 = 0.7;
+R0 = 0.5;
+%R0 = 0.4;
 
 %unsafe set
 Cu = [-1; -1];
@@ -35,20 +35,21 @@ if SOLVE
 
     %d = 2*2;  %degree of relaxation
     %order = input('order of relaxation ='); d = 2*order;
-    order = 3;
+    order = 4;
     d = 2*order;
         
     R = 5;    %radius to contain dynamics
     %dynamics are time-independent
 
     %variables and measures
-    mpol('t', 1);  mpol('x', 2);  mu  = meas([t; x]); %occupation measure
-    mpol('t0', 1); mpol('x0', 2); mu0 = meas([t0; x0]);
-    mpol('tp', 1); mpol('xp', 2); mup = meas([tp; xp]);
+    mpol('t0', 1); mpol('x0', 2); mu0 = meas([t0; x0]); %initial measure
+    mpol('t', 1);  mpol('x', 2);  mu  = meas([t; x]);   %occupation measure    
+    mpol('tp', 1); mpol('xp', 2); mup = meas([tp; xp]); %peak measure
 
     %test functions (monomials)
-    v  = mmon([t; x], d);
+    
     v0 = mmon([t0; x0], d);
+    v  = mmon([t; x], d);
     vp = mmon([tp; xp], d);
 
     %unknown moments of initial measure
@@ -233,8 +234,12 @@ if PLOT
     %contour in SOS program (safety contour)
     if ISOSURFACE
         syms tc xc yc;
-        vv = monolist([tc; xc; yc], d);
-        p = dual_rec'*vv - obj;
+        %scaling with t
+        vv = monolist([tc/T; xc; yc], d);
+        
+        %recovered dual variables from msdp, correspond to the free
+        %variables in the sedumi problem
+        p = dual_rec'*vv + obj;
 
         
         fi = fimplicit3(p, [0, T, -m, m, -m, m], 'MeshDensity',MD, ...
@@ -243,6 +248,7 @@ if PLOT
 
     end
     
+    %sample some trajectories in X0
     for i = 1:Nsample        
         if i == 1
             plot3(xtraj{i}.t, xtraj{i}.x(:, 1), xtraj{i}.x(:, 2), 'c')
@@ -251,13 +257,44 @@ if PLOT
         end        
     end  
     
-    if ISOSURFACE
-        legend({'Initial Set', 'Safety Margin', 'Safety Contour', 'Trajectories'}, 'location', 'northwest')
-    else
-        legend({'Initial Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
-    end
     
-    title(['Safety Margin for Trajectories = ', num2str(obj, 2), ' order = ', num2str(order)])
+    if rank0 == 1 && rankp == 1
+        %global optimum was found
+        
+        %xtraj_opt = struct;
+        %[xtraj_opt.t, xtraj_opt.x] = ode45(fv, [0, T], x0_out);  
+        
+        plot3(xtraj_opt.t, xtraj_opt.x(:, 1), xtraj_opt.x(:, 2), 'b', 'LineWidth', 2)
+        
+        
+        MS = 200;
+        
+        scatter3(tp_out, xp_out(1), xp_out(2), MS, '*b', 'HandleVisibility','off', 'LineWidth', 2)
+        scatter3(0, x0_out(1), x0_out(2), MS, 'ob', 'HandleVisibility','off', 'LineWidth', 2)
+        
+%        legend({'Initial Set', 'Safety Margin', 'Trajectories', 'Peak Traj.'}, 'location', 'northwest')
+        if ISOSURFACE
+            legend({'Initial Set', 'Safety Margin', 'Safety Contour', 'Trajectories', 'Peak Traj.'}, 'location', 'northwest')
+        else
+            legend({'Initial Set', 'Safety Margin', 'Trajectories', 'Peak Traj'}, 'location', 'northwest')
+        end
+
+
+        title(['Safety Margin for Trajectories = ', num2str(obj, 3), ' order = ', num2str(order)])
+    
+    else
+        %global optimum not found
+        if ISOSURFACE
+            legend({'Initial Set', 'Safety Margin', 'Safety Contour', 'Trajectories'}, 'location', 'northwest')
+        else
+            legend({'Initial Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
+        end
+
+    
+        
+        legend({'Initial Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
+        title(['Safety Margin for Trajectories = ', num2str(obj, 2), ' at time t=', num2str(tp_out, 3)])
+    end     
     
     xlim([0, T])
     ylim([-m, m])
