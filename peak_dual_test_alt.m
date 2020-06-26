@@ -16,20 +16,21 @@ Ru = 0.4;
 
 %minimize the vertical coordinate (1)
 %or safety margin of circle (0)
-LINE_COST = 1;
+LINE_COST = 0;
 
 %mesh density
-MD = 50;
+%MD = 200;
+MD = 80;
 
 %final time
-T = 10;
+T = 6;
 %dynamics
 fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 
 if SOLVE
     %options and degrees
     opts = sdpsettings('solver', 'mosek');
-    order = 8;
+    order =4;
     d = order * 2;
 
     %variables in polynomials
@@ -84,17 +85,18 @@ if SOLVE
     cons = [cons, sos(Lv - gt*stf - gX*sxf), sos(stf), sos(sxf)];
     %peak
     %cons = [cons, sos(p - v - gt*stp - gX*sxp), sos(stp), sos(sxp)];
-    cons = [cons, sos(p - v - gt*stp - gX*sxp), sos(stp), sos(sxp)];
+    cons = [cons, sos(-p - v - gt*stp - gX*sxp), sos(stp), sos(sxp)];
 
     solvesos(cons, obj, opts, [cv; cx0; ctf; cxf; ctp; cxp; gamma]);
 
-    obj_val = value(obj)
+    obj_val = value(obj);
+    gamma_val = value(gamma);
     radius_out = sqrt(-value(obj) + Ru^2);
 end
 
 if PLOT
     m = 3.25;
-    Nsample = 40;
+    Nsample = 60;
     %initial set        
     Ntheta = 100;
     theta = linspace(0, 2*pi, Ntheta);
@@ -120,7 +122,7 @@ if PLOT
     plot(X0(1, :), X0(2, :), 'k', 'Linewidth', 3)
     
     if LINE_COST
-        plot([-m, m], obj_val*[1, 1], 'r--', 'Linewidth', 3)
+        plot([-m, m], gamma_val*[1, 1], 'r--', 'Linewidth', 3)
     else
         patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
         plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
@@ -145,10 +147,10 @@ if PLOT
     
     if LINE_COST
         legend({'Initial Set', 'Escape Margin', 'Trajectories'}, 'location', 'northwest')
-        title(['Escape Margin for Trajectories = ', num2str(value(obj), 2), ' order = ', num2str(order)])
+        title(['Escape Margin for Trajectories = ', num2str(gamma_val, 2), ' order = ', num2str(order)])
     else
     legend({'Initial Set', 'Unsafe Set', 'Escape Margin', 'Trajectories'}, 'location', 'northwest')
-        title(['Escape Margin for Trajectories = ', num2str(value(obj), 2)])
+        title(['Escape Margin for Trajectories = ', num2str(gamma_val, 2)])
     end
     
     %plot trajectories in time
@@ -159,8 +161,13 @@ if PLOT
     plot3(zeros(Ntheta, 1), X0(1, :), X0(2, :), 'k', 'Linewidth', 3)
     
     %lower bound to maximum (escape margin)
-    if LINE_COST
-        patch('XData',[0, 0, T, T], 'YData',[-m, m, m, -m], 'ZData', obj_val*[1,1,1,1], 'FaceColor', 'r', 'FaceAlpha', 0.3)
+    if LINE_COST                
+        patch('XData',[0, 0, T, T], 'YData',[-m, m, m, -m], 'ZData', gamma_val*[1,1,1,1], 'FaceColor', 'r', 'FaceAlpha', 0.3)
+    else
+        [xcyl, ycyl, zcyl] = cylinder(1, 50);
+        surf(T*zcyl, Cu(1) + xcyl*Ru, Cu(2) + ycyl*Ru, 'FaceColor', 'r', 'EdgeColor', 'None')
+        surf(T*zcyl, Cu(1) + xcyl*radius_out, Cu(2) + ycyl*radius_out, ...
+            'FaceColor', 'r', 'EdgeColor', 'None', 'Facealpha', 0.3)
     end
     
     %contour in SOS program (escape contour)
@@ -190,7 +197,7 @@ if PLOT
         legend({'Initial Set', 'Escape Margin', 'Trajectories'}, 'location', 'northwest')
     end
     
-    title(['Escape Margin for Trajectories = ', num2str(value(obj), 2), ' order = ', num2str(order)])
+    title(['Escape Margin for Trajectories = ', num2str(gamma_val, 2), ' order = ', num2str(order)])
     
     xlim([0, T])
     ylim([-m, m])
