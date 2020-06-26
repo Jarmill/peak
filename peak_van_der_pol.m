@@ -104,24 +104,13 @@ end
 
 if PLOT
     m = 3.25;
-    N = 30;
+    
     Nsample = 40;
-    %[x, y] = meshgrid(linspace(-m, m, N));
-
-    
-    %xdot = y;    
-    %ydot = mu_van*(1-x.^2).*y - x; 
-    
-    %xdot = mu_van*(x - x.^3/3 - y);
-    %ydot = x / mu_van;
-    %quiver(x, y, xdot, ydot)
-
     %initial and unsafe sets
     theta = linspace(0, 2*pi, 100);
     circ = [cos(theta); sin(theta)];
     
-    %initial set
-
+    
     
     X0_pts = C0 + circ*R0;
     
@@ -156,7 +145,7 @@ if PLOT
     xtraj = cell(Nsample, 1);
     for i = 1:Nsample
         xtraj{i} = struct;
-        [xtraj{i}.t, xtraj{i}.x] = ode45(fv, [0, T], [Xsample(:, i)]);  
+        [xtraj{i}.t, xtraj{i}.x] = ode45(fv, [0, T], Xsample(:, i));  
         
         if i == 1
             plot(xtraj{i}.x(:, 1), xtraj{i}.x(:, 2), 'c')

@@ -6,6 +6,19 @@
 SOLVE = 1;
 PLOT = 1;
 
+T = 10;   %final time
+
+%initial set
+C0 = [1.5; 0];
+R0 = 0.5;
+
+%unsafe set
+Cu = [-1; -1];
+Ru = 0.4;
+
+%dynamics
+fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+
 if SOLVE
     mset clear
     mset('yalmip',true);
@@ -15,8 +28,7 @@ if SOLVE
     d0 = input('order of relaxation ='); d = 2*d0;
     %d0 = 5;
     d = 2*d0;
-    
-    T = 20;   %final time
+        
     R = 5;    %radius to contain dynamics
     %dynamics are time-independent
 
@@ -47,14 +59,14 @@ if SOLVE
     %Support Constraints
     X  = [x'*x <= R^2];
     Xp = [xp'*xp <= R^2];
-    X0 = [(x0(1)-1.5)^2 + x0(2)^2 <= 0.25];
+    X0 = [(x0(1)-C0(1))^2 + (x0(2)-C0(2))^2 <= R0^2];
 
     %bounds on trajectory
     supp_con = [X0, X, Xp, ...
         t*(1-t) >= 0, tp*(1 - tp) >= 0, t0 == 0];
 
     %function to optimize
-    cost = 0.25 - (xp(1)+1)^2 - (xp(2)+1)^2;
+    cost = Ru^2 - (xp(1)-Cu(1))^2 - (xp(2)-Cu(2))^2;
     %cost = -xp(2);
     objective = max(cost);
 
@@ -67,7 +79,7 @@ if SOLVE
     
     
     %extract solutions
-    radius_out = sqrt(-obj + 0.16);
+    radius_out = sqrt(-obj + Ru^2);
     M0 = double(mmat(mu0));
     Mp = double(mmat(mup));
     
@@ -91,12 +103,12 @@ end
 
 if PLOT
     m = 3;
-    N = 20;
+    %N = 20;
     Nsample = 40;
-    [x, y] = meshgrid(linspace(-m, m, N));
+    %[x, y] = meshgrid(linspace(-m, m, N));
 
-    xdot = y;
-    ydot = -x + (1/3).* x.^3 - y;
+    %xdot = y;
+    %ydot = -x + (1/3).* x.^3 - y;
 
     %quiver(x, y, xdot, ydot)
 
@@ -104,10 +116,7 @@ if PLOT
     theta = linspace(0, 2*pi, 100);
     circ = [cos(theta); sin(theta)];
     
-    %initial set
-    C0 = [1.5; 0];
-    R0 = 0.5;
-    
+    %initial set        
     X0 = C0 + circ*R0;
     
     %sample from X0 
@@ -117,10 +126,7 @@ if PLOT
     
     
     
-    %unsafe set
-    Cu = [-1; -1];
-    Ru = 0.4;
-    
+    %unsafe set    
     Xu = Cu + circ*Ru;            
     Xmargin = Cu + circ*radius_out;
     
@@ -133,16 +139,33 @@ if PLOT
     plot(X0(1, :), X0(2, :), 'k', 'Linewidth', 3)
     patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
     plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
-    hlines_c0 = streamline(x, y, xdot, ydot, C0(1), C0(2));
-    hlines = streamline(x, y, xdot, ydot, Xsample(1, :), Xsample(2, :));
+    %hlines_c0 = streamline(x, y, xdot, ydot, C0(1), C0(2));
+    %hlines = streamline(x, y, xdot, ydot, Xsample(1, :), Xsample(2, :));
     
-    set(hlines_c0, 'Color', 'c')
-    set(hlines, 'Color', 'c', 'HandleVisibility','off')
+    %set(hlines_c0, 'Color', 'c')
+    %set(hlines, 'Color', 'c', 'HandleVisibility','off')
+    
+    xtraj = cell(Nsample, 1);
+    for i = 1:Nsample
+        xtraj{i} = struct;
+        [xtraj{i}.t, xtraj{i}.x] = ode45(fv, [0, T], Xsample(:, i));  
+        
+        if i == 1
+            plot(xtraj{i}.x(:, 1), xtraj{i}.x(:, 2), 'c')
+        else
+            plot(xtraj{i}.x(:, 1), xtraj{i}.x(:, 2), 'c', 'HandleVisibility','off')
+        end
+    end 
+    
     
     if rank0 == 1 && rankp == 1
         %global optimum was found
-        hlines_p = streamline(x, y, xdot, ydot, x0_out(1), x0_out(2));
-        set(hlines_p, 'LineWidth', 2)
+        
+        xtraj_opt = struct;
+        [xtraj_opt.t, xtraj_opt.x] = ode45(fv, [0, T], x0_out);  
+        
+        plot(xtraj_opt.x(:, 1), xtraj_opt.x(:, 2), 'b', 'LineWidth', 2)
+        
         
         MS = 200;
         
@@ -154,12 +177,7 @@ if PLOT
     else
         legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
         title(['Safety Margin for Trajectories = ', num2str(obj, 2)])
-    end
-    
-    
-    
-    
-    
+    end                    
 
     xlim([-m, m])
     ylim([-m, m])
