@@ -1,9 +1,9 @@
 %solve the flow test program in dual form
 %hopefully this works
 
-SOLVE = 0;
+SOLVE = 1;
 PLOT = 1;
-ISOSURFACE = 1;
+ISOSURFACE = 0;
 
 %initial set
 C0 = [1.5; 0];

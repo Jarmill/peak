@@ -4,22 +4,31 @@
 %vv = monolist([Tc;Xc;Yc],d);
 syms tc xc yc;
 vv = monolist([tc; xc; yc], d);
-p = value(cv)'*vv - value(gamma);
 
-[pc, pt] = coeffs(p, [tc;xc;yc]);
-pc = double(pc);
+%SOS from yalmip
+%p = value(cv)'*vv - value(gamma);
 
-Nt = 200;
-N = 80;
+%Moment dual from gloptipoly
+%p = dual'*vv + obj;
 
-[Tc, Xc, Yc] = meshgrid(linspace(0, T, Nt), linspace(-m, m, N), linspace(-m, m, N));
+%export SDP from gloptipoly
+[xs, ys, infos] = sedumi(model.A, model.b, model.c, model.K);
+dual_var = xs(1:length(v));
+p = dual_var'*vv - obj;
+%[pc, pt] = coeffs(p, [tc;xc;yc]);
+%pc = double(pc);
 
-Vc = subs(p, {tc, xc, yc}, {Tc, Xc, Yc}); 
+%Nt = 200;%
+%N = 80;
 
-%MD = 100;
-%fi = fimplicit3(p, [0, T, -m, m, -m, m], 'MeshDensity',MD, ...
-%    'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
-%    'DisplayName', 'Escape Contour');
+%[Tc, Xc, Yc] = meshgrid(linspace(0, T, Nt), linspace(-m, m, N), linspace(-m, m, N));
+
+%Vc = subs(p, {tc, xc, yc}, {Tc, Xc, Yc}); 
+
+MD = 50;
+fi = fimplicit3(p, [0, T, -m, m, -m, m], 'MeshDensity',MD, ...
+    'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
+    'DisplayName', 'Escape Contour');
 
 
 xlim([0, T])

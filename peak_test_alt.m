@@ -5,20 +5,28 @@
 %Author: Jared Miller 6/22/20
 SOLVE = 1;
 PLOT = 1;
+ISOSURFACE = 0;
+MD = 40; %mesh density
 
-T = 10;   %final time
+
+T = 6;   %final time
 
 %initial set
+%C0 = [1; 0.5];
 C0 = [1.5; 0];
 %R0 = 0.5;
-R0 = 1;
+R0 = 0.7;
 
 %unsafe set
 Cu = [-1; -1];
 Ru = 0.4;
 
+LINE_COST = 1;
+
 %dynamics
 fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+
+
 
 if SOLVE
     mset clear; warning('off','YALMIP:strict')
@@ -26,9 +34,9 @@ if SOLVE
     mset(sdpsettings('solver', 'mosek'));
 
     %d = 2*2;  %degree of relaxation
-    %d0 = input('order of relaxation ='); d = 2*d0;
-    d0 = 2;
-    d = 2*d0;
+    %order = input('order of relaxation ='); d = 2*order;
+    order = 3;
+    d = 2*order;
         
     R = 5;    %radius to contain dynamics
     %dynamics are time-independent
@@ -69,8 +77,12 @@ if SOLVE
     supp_con = [X0, t0 == 0, X, t*(1-t) >= 0, Xp, tp*(1 - tp) >= 0];
         
     %function to optimize
-    cost = Ru^2 - (xp(1)-Cu(1))^2 - (xp(2)-Cu(2))^2;
-    %cost = -xp(2);
+    if LINE_COST
+        cost = -xp(2);   
+    else
+        cost = Ru^2 - (xp(1)-Cu(1))^2 - (xp(2)-Cu(2))^2;
+    end
+    
     objective = max(cost);
 
     %Input LMI moment problem
@@ -79,11 +91,12 @@ if SOLVE
 
     %solve LMIP moment problem
     %[status, obj] = msol(P);
-    [status,obj,m,dual]= msol(P);
-
+    [status,obj,m,dual_rec]= msol(P);
+    [model.A, model.b, model.c, model.K, model.b0, model.s] = msedumi(P);
     
     %extract solutions
-    radius_out = sqrt(-obj + Ru^2);
+    gamma_val = -obj;
+    radius_out = sqrt(gamma_val + Ru^2);
     M0 = double(mmat(mu0));
     Mp = double(mmat(mup));
     
@@ -100,11 +113,7 @@ if SOLVE
     tp_out = T*double(mom(tp));
     xp_out = double(mom(xp));
     %radius_out = sqrt(obj);
-    
-    [model.A, model.b, model.c, model.K, model.b0, model.s] = msedumi(P);
-    
-    
-    
+        
 end
 
 if PLOT
@@ -119,7 +128,9 @@ if PLOT
     %quiver(x, y, xdot, ydot)
 
     %initial and unsafe sets
-    theta = linspace(0, 2*pi, 100);
+    Ntheta = 100;
+    
+    theta = linspace(0, 2*pi, Ntheta);
     circ = [cos(theta); sin(theta)];
     
     %initial set        
@@ -140,11 +151,20 @@ if PLOT
     
     figure(1)
     clf
+    
+    subplot(1,3,1)
     hold on
     
     plot(X0_pts(1, :), X0_pts(2, :), 'k', 'Linewidth', 3)
-    patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
-    plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
+    
+    if LINE_COST
+        plot([-m, m], gamma_val*[1, 1], 'r--', 'Linewidth', 3)
+    else
+        patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
+        plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
+    end
+    %patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
+    %plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
     %hlines_c0 = streamline(x, y, xdot, ydot, C0(1), C0(2));
     %hlines = streamline(x, y, xdot, ydot, Xsample(1, :), Xsample(2, :));
     
@@ -179,10 +199,10 @@ if PLOT
         scatter(x0_out(1), x0_out(2), MS, 'ob', 'HandleVisibility','off', 'LineWidth', 2)
         
         legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories', 'Peak Traj.'}, 'location', 'northwest')
-        title(['Safety Margin for Trajectories = ', num2str(obj, 3), ' at time t=', num2str(tp_out, 3)])
+        title(['Safety Margin for Trajectories = ', num2str(gamma_val, 3), ' at time t=', num2str(tp_out, 3)])
     else
         legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
-        title(['Safety Margin for Trajectories = ', num2str(obj, 2)])
+        title(['Safety Margin for Trajectories = ', num2str(gamma_val, 2)])
     end                    
 
     xlim([-m, m])
@@ -192,6 +212,60 @@ if PLOT
     axis square
     xlabel('x')
     ylabel('y')
+    
+    %plot trajectories in time
+    subplot(1,3,[2,3])    
+    hold on
+    
+    %initial set
+    plot3(zeros(Ntheta, 1), X0_pts(1, :), X0_pts(2, :), 'k', 'Linewidth', 3)
+    
+    %lower bound to maximum (safety margin)
+    if LINE_COST                
+        patch('XData',[0, 0, T, T], 'YData',[-m, m, m, -m], 'ZData', gamma_val*[1,1,1,1], 'FaceColor', 'r', 'FaceAlpha', 0.3)
+    else
+        [xcyl, ycyl, zcyl] = cylinder(1, 50);
+        surf(T*zcyl, Cu(1) + xcyl*Ru, Cu(2) + ycyl*Ru, 'FaceColor', 'r', 'EdgeColor', 'None')
+        surf(T*zcyl, Cu(1) + xcyl*radius_out, Cu(2) + ycyl*radius_out, ...
+            'FaceColor', 'r', 'EdgeColor', 'None', 'Facealpha', 0.3)
+    end
+    
+    %contour in SOS program (safety contour)
+    if ISOSURFACE
+        syms tc xc yc;
+        vv = monolist([tc; xc; yc], d);
+        p = dual_rec'*vv - obj;
+
+        
+        fi = fimplicit3(p, [0, T, -m, m, -m, m], 'MeshDensity',MD, ...
+            'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
+            'DisplayName', 'Safety Contour');
+
+    end
+    
+    for i = 1:Nsample        
+        if i == 1
+            plot3(xtraj{i}.t, xtraj{i}.x(:, 1), xtraj{i}.x(:, 2), 'c')
+        else
+            plot3(xtraj{i}.t, xtraj{i}.x(:, 1), xtraj{i}.x(:, 2), 'c', 'HandleVisibility','off')
+        end        
+    end  
+    
+    if ISOSURFACE
+        legend({'Initial Set', 'Safety Margin', 'Safety Contour', 'Trajectories'}, 'location', 'northwest')
+    else
+        legend({'Initial Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
+    end
+    
+    title(['Safety Margin for Trajectories = ', num2str(obj, 2), ' order = ', num2str(order)])
+    
+    xlim([0, T])
+    ylim([-m, m])
+    zlim([-m, m])
+    xlabel('time')
+    ylabel('x_1')
+    zlabel('x_2')
+    pbaspect([2.25 1 1])
     
 end
 
