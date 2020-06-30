@@ -9,24 +9,52 @@ ISOSURFACE = 1;
 MD = 40; %mesh density of isosurface plot
 
 
-T = 10;   %final time
+T = 6;
+%T = 20;   %final time
 
 %initial set
 %C0 = [1; 0.5];
-C0 = [1.5; 0];
-R0 = 0.5;
+%C0 = [1.5; 0];
 %R0 = 0.4;
+
+C0 = [1.5; 1];
+R0 = 0.25;
 
 %unsafe set
 Cu = [-1; -1];
 Ru = 0.4;
 
+%plotting
+%m_low = -1;
+m_low = -3;
+m_high = 3;
+
 LINE_COST = 1;
 
+
+
 %dynamics
-fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 
+%prajna and rantzer
+%fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 
+%linear decay
+%fv = @(t, x) [-x(1); -x(1) - x(2)];
+
+%linear oscillation decay
+%fv = @(t, x) [-x(2); x(1) - 0.2*x(2)];
+
+%linear oscillation
+%fv = @(t, x) 2*[-x(2); x(1)];
+
+%rusty spring
+fv =  @(t, x) [x(2); -1*x(1) - 0.25*x(1)^3];
+
+%van der pol
+%fv = @(t, x) [x(2); (1-x(1)^2)*x(2) - x(1)];
+
+%predator prey
+%fv = @(t, x) [(2 * x(1) - 4*x(1)*x(2))/3; x(1)*x(2) - x(2)];
 
 if SOLVE
     mset clear; warning('off','YALMIP:strict')
@@ -35,10 +63,10 @@ if SOLVE
 
     %d = 2*2;  %degree of relaxation
     %order = input('order of relaxation ='); d = 2*order;
-    order = 3;
+    order = 5;
     d = 2*order;
         
-    R = 5;    %radius to contain dynamics
+    R = 6;    %radius to contain dynamics
     %dynamics are time-independent
 
     %variables and measures
@@ -58,7 +86,8 @@ if SOLVE
 
     %dynamics and cost
     %scale all dynamics to [0, 1] to improve time scaling
-    f = T*[x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+    %f = T*[x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+    f = T*fv(t, x);
     %Liouville Equation 
     Ay = mom(diff(v, t) + diff(v, x)*f); 
     Liou = Ay + (y0 - yp);
@@ -106,8 +135,8 @@ if SOLVE
     M0_1 = M0(1:4, 1:4);
     Mp_1 = Mp(1:4, 1:4);
     
-    rank0 = rank(Mp_1, 1e-4);
-    rankp = rank(M0_1, 1e-4);
+    rank0 = rank(M0_1, 1e-4);
+    rankp = rank(Mp_1, 1e-4);
     
     t0_out = double(mom(t0));
     x0_out = double(mom(x0));
@@ -119,10 +148,9 @@ if SOLVE
 end
 
 if PLOT
-    m = 3;
-    %N = 20;
+    
     Nsample = 40;
-    %[x, y] = meshgrid(linspace(-m, m, N));
+    %[x, y] = meshgrid(linspace(m_low, m, N));
 
     %xdot = y;
     %ydot = -x + (1/3).* x.^3 - y;
@@ -160,7 +188,7 @@ if PLOT
     plot(X0_pts(1, :), X0_pts(2, :), 'k', 'Linewidth', 3)
     
     if LINE_COST
-        plot([-m, m], gamma_val*[1, 1], 'r--', 'Linewidth', 3)
+        plot([m_low, m_high], gamma_val*[1, 1], 'r--', 'Linewidth', 3)
     else
         patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
         plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
@@ -200,15 +228,23 @@ if PLOT
         scatter(xp_out(1), xp_out(2), MS, '*b', 'HandleVisibility','off', 'LineWidth', 2)
         scatter(x0_out(1), x0_out(2), MS, 'ob', 'HandleVisibility','off', 'LineWidth', 2)
         
-        legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories', 'Peak Traj.'}, 'location', 'northwest')
-        title(['Safety Margin for Trajectories = ', num2str(gamma_val, 3), ' at time t=', num2str(tp_out, 3)])
+        if LINE_COST
+            legend({'Initial Set', 'Safety Margin', 'Trajectories', 'Peak Traj.'}, 'location', 'northwest')
+        else
+            legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories', 'Peak Traj.'}, 'location', 'northwest')
+        end        
     else
-        legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
-        title(['Safety Margin for Trajectories = ', num2str(gamma_val, 2)])
-    end                    
+        if LINE_COST
+            legend({'Initial Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
+        else
+            legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
+        end        
+    end    
+    
+    title(['Safety Margin for Trajectories = ', num2str(-gamma_val, 3), ' order = ', num2str(order)])
 
-    xlim([-m, m])
-    ylim([-m, m])
+    xlim([m_low, m_high])
+    ylim([m_low, m_high])
     
     hold off
     axis square
@@ -224,7 +260,7 @@ if PLOT
     
     %lower bound to maximum (safety margin)
     if LINE_COST                
-        patch('XData',[0, 0, T, T], 'YData',[-m, m, m, -m], 'ZData', gamma_val*[1,1,1,1], 'FaceColor', 'r', 'FaceAlpha', 0.3)
+        patch('XData',[0, 0, T, T], 'YData',[m_low, m_high, m_high, m_low], 'ZData', gamma_val*[1,1,1,1], 'FaceColor', 'r', 'FaceAlpha', 0.3)
     else
         [xcyl, ycyl, zcyl] = cylinder(1, 50);
         surf(T*zcyl, Cu(1) + xcyl*Ru, Cu(2) + ycyl*Ru, 'FaceColor', 'r', 'EdgeColor', 'None')
@@ -244,7 +280,7 @@ if PLOT
         p = dual_rec'*vv + obj;
 
         
-        fi = fimplicit3(p, [0, T, -m, m, -m, m], 'MeshDensity',MD, ...
+        fi = fimplicit3(p, [0, T, m_low, m_high, m_low, m_high], 'MeshDensity',MD, ...
             'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Safety Contour');
 
@@ -291,8 +327,9 @@ if PLOT
         end
 
 
-        title(['Safety Margin for Trajectories = ', num2str(gamma_val, 3), ' order = ', num2str(order)])
-    
+        
+        
+        title(['Safety Margin for Trajectories = ', num2str(-gamma_val, 2), ' at time t=', num2str(tp_out, 3)])
     else
         %global optimum not found
         if LINE_COST
@@ -311,13 +348,12 @@ if PLOT
 
     
         
-        legend({'Initial Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
-        title(['Safety Margin for Trajectories = ', num2str(gamma_val, 2), ' at time t=', num2str(tp_out, 3)])
+        title(['Safety Margin for Trajectories = ', num2str(-gamma_val, 3)])
     end     
     
     xlim([0, T])
-    ylim([-m, m])
-    zlim([-m, m])
+    ylim([m_low, m_high])
+    zlim([m_low, m_high])
     xlabel('time')
     ylabel('x_1')
     zlabel('x_2')
