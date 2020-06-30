@@ -3,22 +3,21 @@
 % by Anders Rantzer and Stephen Prajna
 
 %Author: Jared Miller 6/22/20
-SOLVE = 1;
+SOLVE = 0;
 PLOT = 1;
 ISOSURFACE = 1;
-MD = 40; %mesh density of isosurface plot
+MD = 80; %mesh density of isosurface plot
 
 
 T = 6;
 %T = 20;   %final time
 
 %initial set
-%C0 = [1; 0.5];
-%C0 = [1.5; 0];
-%R0 = 0.4;
+C0 = [1.5; 0];
+R0 = 0.4;
 
-C0 = [1.5; 1];
-R0 = 0.25;
+%C0 = [1.5; 1];
+%R0 = 0.25;
 
 %unsafe set
 Cu = [-1; -1];
@@ -36,7 +35,7 @@ LINE_COST = 1;
 %dynamics
 
 %prajna and rantzer
-%fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 
 %linear decay
 %fv = @(t, x) [-x(1); -x(1) - x(2)];
@@ -48,7 +47,7 @@ LINE_COST = 1;
 %fv = @(t, x) 2*[-x(2); x(1)];
 
 %rusty spring
-fv =  @(t, x) [x(2); -1*x(1) - 0.25*x(1)^3];
+%fv =  @(t, x) [x(2); -1*x(1) - 0.25*x(1)^3];
 
 %van der pol
 %fv = @(t, x) [x(2); (1-x(1)^2)*x(2) - x(1)];
