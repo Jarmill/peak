@@ -10,9 +10,12 @@
 SOLVE = 1;
 PLOT = 1;
 ISOSURFACE = 1;
-MD = 50; %mesh density of isosurface plot
+MD = 80; %mesh density of isosurface plot
 
-SCALE = 0;
+
+%Enable scaling of all variables through mpol/scale (SCALE = 1)
+%or manually scale the time coordinate only (SCALE = 0)
+SCALE = 1;
 
 T = 8;
 %T = 20;   %final time
@@ -33,9 +36,7 @@ Ru = 0.4;
 m_low = -3;
 m_high = 3;
 
-LINE_COST = 0;
-
-
+LINE_COST = 1;
 
 %dynamics
 
@@ -66,9 +67,8 @@ if SOLVE
     mset('yalmip',true);
     mset(sdpsettings('solver', 'mosek'));
 
-    %d = 2*2;  %degree of relaxation
     %order = input('order of relaxation ='); d = 2*order;
-    order = 5;
+    order = 4;
     d = 2*order;
         
     R = 5;    %radius to contain dynamics
@@ -112,7 +112,7 @@ if SOLVE
     
     if SCALE
         Tsupp = [t*(T-t) >= 0, tp*(T - tp) >= 0, t0 == 0];
-        scale(t, T); scale(tp, T); scale(x, R); scale(x0, R); scale(xp, R)
+        scale(t, T); scale(tp, T); scale(x, R); scale(x0, R); scale(xp, R);
     else
         Tsupp = [t*(1-t) >= 0, tp*(1 - tp) >= 0, t0 == 0];
     end
