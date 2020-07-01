@@ -9,7 +9,7 @@
 %Author: Jared Miller 6/22/20
 SOLVE = 0;
 PLOT = 1;
-ISOSURFACE = 1;
+ISOSURFACE = 0;
 MD = 80; %mesh density of isosurface plot
 
 
@@ -19,8 +19,8 @@ SCALE = 0;
 
 
 %Time Range
-%T = 8;
-T = 20;   %final time
+T = 8;
+%T = 20;   %final time
 
 %Are the measures independent of time? mu(x) instead of mu(t, x)
 TIME_INDEP = 1;
@@ -39,11 +39,8 @@ Ru = 0.4;
 
 %plotting
 %m_low = -1;
-% m_low = -3;
-% m_high = 3;
-
-m_low = -5;
-m_high = 5;
+m_low = -3;
+m_high = 3;
 
 %subspace angle
 %theta = 3*pi/2; %(equivalent to maximizing -x(2))
@@ -54,7 +51,7 @@ LINE_COST = 1;
 %dynamics
 
 %prajna and rantzer
-%fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 
 %linear decay
 %fv = @(t, x) [-x(1); -x(1) - x(2)];
@@ -69,7 +66,7 @@ LINE_COST = 1;
 %fv =  @(t, x) [x(2); -1*x(1) - 0.25*x(1)^3];
 
 %van der pol
-fv = @(t, x) [x(2); (1-x(1)^2)*x(2) - x(1)];
+%fv = @(t, x) [x(2); (1-x(1)^2)*x(2) - x(1)];
 
 %predator prey
 %fv = @(t, x) [(2 * x(1) - 4*x(1)*x(2))/3; x(1)*x(2) - x(2)];
@@ -81,7 +78,7 @@ if SOLVE
     mset(sdpsettings('solver', 'mosek'));
 
     %order = input('order of relaxation ='); d = 2*order;
-    order = 5;
+    order = 4;
     d = 2*order;
         
     R = 5;    %radius to contain dynamics
@@ -107,8 +104,6 @@ if SOLVE
         
         t = 0;
 
-        f = fv(t, x);
-        
         %Liouville Equation 
         Ay = mom(diff(v, x)*f); 
 
@@ -137,28 +132,25 @@ if SOLVE
 
         
 
-   
+        %Liouville Equation 
+        Ay = mom(diff(v, t) + diff(v, x)*f); 
 
-
-        %dynamics and time-support   
-
+        
         if SCALE
             Tsupp = [t*(T-t) >= 0, tp*(T - tp) >= 0, t0 == 0];
             scale(t, T); scale(tp, T); scale(x, R); scale(x0, R); scale(xp, R);
-            f = fv(t, x);
         else
             Tsupp = [t*(1-t) >= 0, tp*(1 - tp) >= 0, t0 == 0];
-            f = T*fv(t, x);
         end
-        
-        %Liouville Equation
-        Ay = mom(diff(v, t) + diff(v, x)*f); 
     end
     
-
-        
+    %dynamics and cost   
+    if SCALE
+        f = fv(t, x);
+    else
+        f = T*fv(t, x);
+    end
     
-    %Liouville Equation
     Liou = Ay + (y0 - yp);
 
     mom_con = [Liou == 0; mass(mu0)==1];
@@ -175,13 +167,12 @@ if SOLVE
     
     %function to optimize
     if LINE_COST                
-        costv = @(x) x(:, 2)*sin(theta) + x(:, 1)*cos(theta);
-        %x * [cos(theta); sin(theta)];
+        costv = @(x) x * [cos(theta); sin(theta)];
     else
-        costv = @(x) Ru^2 - (x(:, 1)-Cu(1)).^2 - (x(:, 2)-Cu(2)).^2;
+        costv = Ru^2 - (x(:, 2)-Cu(1)).^2 - (x(:, 2)-Cu(2)).^2;
     end
     
-    cost = costv(xp');
+    cost = costv(xp);
     
     objective = max(cost);
 
@@ -193,7 +184,7 @@ if SOLVE
 
     %solve LMI moment problem    
     [status,obj,m,dual_rec]= msol(P);
-    [model.A, model.b, model.c, model.K, model.b0, model.s] = msedumi(P);
+    %[model.A, model.b, model.c, model.K, model.b0, model.s] = msedumi(P);
     
     %extract solutions
     gamma_val = -obj;
@@ -252,7 +243,7 @@ if SOLVE
     Lpval = matlabFunction(Lp);
 
     
-    end
+end
 
 if PLOT
     %% Set and Trajectory Properties
@@ -280,7 +271,7 @@ if PLOT
     
 
     
-    figure(5)
+    figure(1)
     clf
     %% Plot Phase Plane
     subplot(1,3,1)
@@ -296,14 +287,12 @@ if PLOT
         plot([box_pts{1}(1), box_pts{2}(1)], [box_pts{1}(2), box_pts{2}(2)], 'r--', 'Linewidth', 3, 'DisplayName', 'Safety Margin')        
     else
         patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none', 'DisplayName', 'Unsafe Set')
-        plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3, 'DisplayName', 'Safety Margin')
+        plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3, 'DisplayName', 'Initial Set')
     end
     
     
     %safety contour if system is time-independent
     if TIME_INDEP
-        fi2 = fimplicit(p  + obj, [m_low, m_high, m_low, m_high], ...
-            ':k', 'DisplayName', 'Safety Contour', 'LineWidth', 3);
     end
     
         
@@ -318,29 +307,15 @@ if PLOT
         else
             plot(xtraj{i}.x(:, 1), xtraj{i}.x(:, 2), 'c', 'HandleVisibility','off')
         end
-    end
+    end 
     
-    %% compute value functions along trajectories
-    for i = 1:Nsample        
-        if TIME_INDEP
-            xtraj{i}.v = pval(xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));                    
-            xtraj{i}.Lv = Lpval(xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));   
-        else
-            xtraj{i}.v = pval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));                    
-            xtraj{i}.Lv = Lpval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));   
-        end
-        
-        xtraj{i}.x_valid = (sum(xtraj{i}.x.^2, 2) <= R^2);
-        xtraj{i}.cost = costv(xtraj{i}.x);
-    end
-
     
     if rank0 == 1 && rankp == 1
         %global optimum was found
         
         %peak trajectory
         xtraj_opt = struct;
-        [xtraj_opt.t, xtraj_opt.x] = ode45(fv, linspace(0, T, 1000), x0_out);  
+        [xtraj_opt.t, xtraj_opt.x] = ode45(fv, [0, T], x0_out);  
         
         plot(xtraj_opt.x(:, 1), xtraj_opt.x(:, 2), 'b', 'LineWidth', 2, 'DisplayName', 'Peak Trajectory')
         
@@ -351,24 +326,9 @@ if PLOT
         scatter(xp_out(1), xp_out(2), MS, '*b', 'HandleVisibility','off', 'LineWidth', 2)
         scatter(x0_out(1), x0_out(2), MS, 'ob', 'HandleVisibility','off', 'LineWidth', 2)
         
- 
+        legend('location', 'northwest')    
     end    
     
-        if rank0 == 1 && rankp == 1
-        %global optimum trajectory
-        if TIME_INDEP
-            xtraj_opt.v = pval(xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
-            xtraj_opt.Lv = Lpval(xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
-        else
-            xtraj_opt.v = pval(xtraj_opt.t, xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
-            xtraj_opt.Lv = Lpval(xtraj_opt.t, xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
-        end
-        
-        xtraj_opt.x_valid = (sum(xtraj_opt.x.^2, 2) <= R^2);
-        xtraj_opt.cost = costv(xtraj_opt.x);
-    end
-    
-    legend('location', 'northwest')   
     title(['Safety Margin for Trajectories = ', num2str(-gamma_val, 3), ' order = ', num2str(order)])
 
     xlim([m_low, m_high])
@@ -406,19 +366,9 @@ if PLOT
     end
     
     if ISOSURFACE
-        %if TIME_INDEP
-            
-        %else
-        %use a hack to get fimplicit3 working for time independent data
-        if TIME_INDEP
-            tc_offset = 1e-12*tc;
-        else
-            tc_offset = 0;
-        end
-        fi = fimplicit3(tc_offset + p  + obj, [0, T, m_low, m_high, m_low, m_high], 'MeshDensity',MD, ...
+        fi = fimplicit3(p  + obj, [0, T, m_low, m_high, m_low, m_high], 'MeshDensity',MD, ...
             'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Safety Contour');
-        %end
     end
     
     %sample some trajectories in X0
@@ -441,24 +391,11 @@ if PLOT
         MS = 200;
         
         %initial and optimal points on peak trajectory
-        if TIME_INDEP
-            %estimate optimal time based on intial conditions
-            %the location may of the optimal point may be different than xp
-            [cost_opt, ind_opt] = max(xtraj_opt.cost);
-            
-            tp_out = xtraj_opt.t(ind_opt);
-            xp_out_approx = xtraj_opt.x(ind_opt, :)';
-            
-            xp_approx_gap = norm(xp_out - xp_out_approx);
-            
-            scatter3(tp_out, xp_out_approx(1), xp_out_approx(2), MS, '*b', 'HandleVisibility','off', 'LineWidth', 2)        
-            title(['Safety Margin for Trajectories = ', num2str(-gamma_val, 3), ' at time t=', num2str(tp_out, 3)])            
-        else
-            scatter3(tp_out, xp_out(1), xp_out(2), MS, '*b', 'HandleVisibility','off', 'LineWidth', 2)        
-            title(['Safety Margin for Trajectories = ', num2str(-gamma_val, 3), ' at time t=', num2str(tp_out, 3)])
-        end
+        scatter3(tp_out, xp_out(1), xp_out(2), MS, '*b', 'HandleVisibility','off', 'LineWidth', 2)
         scatter3(0, x0_out(1), x0_out(2), MS, 'ob', 'HandleVisibility','off', 'LineWidth', 2)
         
+        
+        title(['Safety Margin for Trajectories = ', num2str(-gamma_val, 2), ' at time t=', num2str(tp_out, 3)])
     else
         title(['Safety Margin for Trajectories = ', num2str(-gamma_val, 3)])
     end     
@@ -471,10 +408,26 @@ if PLOT
     xlabel('time')
     ylabel('x_1')
     zlabel('x_2')
-    pbaspect([2.25 1 1])        
-      
+    pbaspect([2.25 1 1])
     
-    %% Plot nonnegativity constraints
+    
+        
+    %% compute value functions along trajectories           
+    for i = 1:Nsample        
+        xtraj{i}.v = pval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));            
+        xtraj{i}.x_valid = (sum(xtraj{i}.x.^2, 2) <= R^2);
+        xtraj{i}.Lv = Lpval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));                               
+        xtraj{i}.cost = costv(xtraj{i}.x);
+    end
+
+    if rank0 == 1 && rankp == 1
+        %global optimum trajectory
+        xtraj_opt.v = pval(xtraj_opt.t, xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
+        xtraj_opt.x_valid = (sum(xtraj_opt.x.^2, 2) <= R^2);
+        xtraj_opt.Lv = Lpval(xtraj_opt.t, xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
+    end
+
+        
     figure(4)        
     clf
     
@@ -528,7 +481,8 @@ if PLOT
     ylabel('L_f v(x,t)')
     legend('location', 'northwest')
     
-    subplot(3,1,3)    
+    subplot(3,1,3)
+    
     hold on
     for i = 1:Nsample
         p_comp = -xtraj{i}.cost - xtraj{i}.v;
@@ -541,8 +495,8 @@ if PLOT
     end
 
     if rank0 == 1 && rankp == 1
-        p_comp = -xtraj_opt.cost - xtraj_opt.v;
-        plot(xtraj_opt.t(xtraj_opt.x_valid), p_comp(xtraj_opt.x_valid), 'b', 'LineWidth', 2, 'DisplayName', 'Peak Traj.')           
+        p_comp = -xtraj{i}.cost - xtraj{i}.v - obj;
+        plot(xtraj_opt.t(xtraj_opt.x_valid), p_comp(xtraj{i}.x_valid), 'b', 'LineWidth', 2, 'DisplayName', 'Peak Traj.')           
     end
     %plots
     
