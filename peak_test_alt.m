@@ -7,10 +7,10 @@
 % by Anders Rantzer and Stephen Prajna
 
 %Author: Jared Miller 6/22/20
-SOLVE = 1;
+SOLVE = 0;
 PLOT = 1;
-ISOSURFACE = 1;
-MD = 40; %mesh density of isosurface plot
+ISOSURFACE = 0;
+MD = 80; %mesh density of isosurface plot
 
 
 %Enable scaling of all variables through mpol/scale (SCALE = 1)
@@ -72,7 +72,7 @@ if SOLVE
     mset(sdpsettings('solver', 'mosek'));
 
     %order = input('order of relaxation ='); d = 2*order;
-    order = 3;
+    order = 4;
     d = 2*order;
         
     R = 5;    %radius to contain dynamics
@@ -125,15 +125,13 @@ if SOLVE
     
     
     %function to optimize
-    if LINE_COST
-        
-        %TODO: add arbitrary subspace angles 
-        %cost = -xp(2);   
-        cost = [cos(theta) sin(theta)]*xp;
-        
+    if LINE_COST                
+        costv = @(x) x * [cos(theta); sin(theta)];
     else
-        cost = Ru^2 - (xp(1)-Cu(1))^2 - (xp(2)-Cu(2))^2;
+        costv = Ru^2 - (x(:, 2)-Cu(1)).^2 - (x(:, 2)-Cu(2)).^2;
     end
+    
+    cost = costv(xp);
     
     objective = max(cost);
 
@@ -307,14 +305,14 @@ if PLOT
 
     %recovered dual variables from msdp, correspond to the free
     %variables in the sedumi problem
-    p = dual_rec'*vv + obj;
+    p = dual_rec'*vv;
     pval = matlabFunction(p);
     
     Lp = diff(p, tc) + [diff(p, xc) diff(p, yc)]*fv(tc, [xc, yc]);
     Lpval = matlabFunction(Lp);
 
     if ISOSURFACE
-        fi = fimplicit3(p, [0, T, m_low, m_high, m_low, m_high], 'MeshDensity',MD, ...
+        fi = fimplicit3(p  + obj, [0, T, m_low, m_high, m_low, m_high], 'MeshDensity',MD, ...
             'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Safety Contour');
 
@@ -366,6 +364,7 @@ if PLOT
         xtraj{i}.v = pval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));            
         xtraj{i}.x_valid = (sum(xtraj{i}.x.^2, 2) <= R^2);
         xtraj{i}.Lv = Lpval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));                               
+        xtraj{i}.cost = costv(xtraj{i}.x);
     end
 
     if rank0 == 1 && rankp == 1
@@ -380,19 +379,19 @@ if PLOT
     clf
     
     %value function 
-    subplot(2,1,1)
+    subplot(3,1,1)
     
     hold on        
     for i = 1:Nsample
         if i == 1
-            plot(xtraj{i}.t(xtraj{i}.x_valid), xtraj{i}.v(xtraj{i}.x_valid), 'c','DisplayName', 'Trajectories')
+            plot(xtraj{i}.t(xtraj{i}.x_valid), xtraj{i}.v(xtraj{i}.x_valid)  + obj, 'c','DisplayName', 'Trajectories')
         else
-            plot(xtraj{i}.t(xtraj{i}.x_valid), xtraj{i}.v(xtraj{i}.x_valid), 'c', 'HandleVisibility','off')
+            plot(xtraj{i}.t(xtraj{i}.x_valid), xtraj{i}.v(xtraj{i}.x_valid) + obj, 'c', 'HandleVisibility','off')
         end  
     end
 
     if rank0 == 1 && rankp == 1
-        plot(xtraj_opt.t(xtraj_opt.x_valid), xtraj_opt.v(xtraj_opt.x_valid), 'b', 'LineWidth', 2, 'DisplayName', 'Peak Traj.')           
+        plot(xtraj_opt.t(xtraj_opt.x_valid), xtraj_opt.v(xtraj_opt.x_valid) + obj, 'b', 'LineWidth', 2, 'DisplayName', 'Peak Traj.')           
     end
     %plots
     
@@ -404,7 +403,7 @@ if PLOT
     ylabel('v(x,t) - \gamma')
     legend('location', 'northwest')
     
-    subplot(2,1,2)
+    subplot(3,1,2)
 
     
     hold on        
@@ -428,6 +427,35 @@ if PLOT
     xlabel('time')
     ylabel('L_f v(x,t)')
     legend('location', 'northwest')
+    
+    subplot(3,1,3)
+    
+    hold on
+    for i = 1:Nsample
+        p_comp = -xtraj{i}.cost - xtraj{i}.v;
+        
+        if i == 1
+            plot(xtraj{i}.t(xtraj{i}.x_valid), p_comp(xtraj{i}.x_valid), 'c','DisplayName', 'Trajectories')
+        else
+            plot(xtraj{i}.t(xtraj{i}.x_valid), p_comp(xtraj{i}.x_valid), 'c', 'HandleVisibility','off')
+        end  
+    end
+
+    if rank0 == 1 && rankp == 1
+        p_comp = -xtraj{i}.cost - xtraj{i}.v - obj;
+        plot(xtraj_opt.t(xtraj_opt.x_valid), p_comp(xtraj{i}.x_valid), 'b', 'LineWidth', 2, 'DisplayName', 'Peak Traj.')           
+    end
+    %plots
+    
+    plot(xlim, [0, 0], ':k',  'HandleVisibility','off')
+    hold off
+    
+    
+    title('Comparision with Objective Function')
+    xlabel('time')
+    ylabel('-cost(x) - v(x,t)')
+    legend('location', 'northwest')
+    
     
     
 end
