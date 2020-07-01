@@ -10,12 +10,12 @@
 SOLVE = 1;
 PLOT = 1;
 ISOSURFACE = 1;
-MD = 80; %mesh density of isosurface plot
+MD = 40; %mesh density of isosurface plot
 
 
 %Enable scaling of all variables through mpol/scale (SCALE = 1)
 %or manually scale the time coordinate only (SCALE = 0)
-SCALE = 1;
+SCALE = 0;
 
 T = 8;
 %T = 20;   %final time
@@ -36,6 +36,10 @@ Ru = 0.4;
 m_low = -3;
 m_high = 3;
 
+%subspace angle
+%theta = 3*pi/2; %(equivalent to maximizing -x(2))
+%theta = pi; %max -x(1)
+theta = 11*pi/8;
 LINE_COST = 1;
 
 %dynamics
@@ -68,7 +72,7 @@ if SOLVE
     mset(sdpsettings('solver', 'mosek'));
 
     %order = input('order of relaxation ='); d = 2*order;
-    order = 4;
+    order = 3;
     d = 2*order;
         
     R = 5;    %radius to contain dynamics
@@ -106,9 +110,9 @@ if SOLVE
 
 
     %Support Constraints
-    X  = [x'*x <= R^2];
-    Xp = [xp'*xp <= R^2];
-    X0 = [(x0(1)-C0(1))^2 + (x0(2)-C0(2))^2 <= R0^2];
+    X  = (x'*x <= R^2);
+    Xp = (xp'*xp <= R^2);
+    X0 = ((x0(1)-C0(1))^2 + (x0(2)-C0(2))^2 <= R0^2);
     
     if SCALE
         Tsupp = [t*(T-t) >= 0, tp*(T - tp) >= 0, t0 == 0];
@@ -124,7 +128,8 @@ if SOLVE
     if LINE_COST
         
         %TODO: add arbitrary subspace angles 
-        cost = -xp(2);   
+        %cost = -xp(2);   
+        cost = [cos(theta) sin(theta)]*xp;
         
     else
         cost = Ru^2 - (xp(1)-Cu(1))^2 - (xp(2)-Cu(2))^2;
@@ -167,8 +172,8 @@ if SOLVE
     
     %space moments
     x0_out = double(mom(x0));
-    xp_out = double(mom(xp));    
         
+    xp_out = double(mom(xp));    
 end
 
 if PLOT
@@ -178,8 +183,8 @@ if PLOT
     %initial and unsafe sets
     Ntheta = 100;
     
-    theta = linspace(0, 2*pi, Ntheta);
-    circ = [cos(theta); sin(theta)];
+    theta_circ = linspace(0, 2*pi, Ntheta);
+    circ = [cos(theta_circ); sin(theta_circ)];
     
     %initial set        
     X0_pts = C0 + circ*R0;
@@ -209,7 +214,11 @@ if PLOT
     
     %safety margins and unsafe region
     if LINE_COST
-        plot([m_low, m_high], gamma_val*[1, 1], 'r--', 'Linewidth', 3, 'DisplayName', 'Safety Margin')
+        
+        box_pts = line_range([cos(theta) sin(theta) gamma_val], [m_low, m_high], [m_low, m_high]);
+        plot([box_pts{1}(1), box_pts{2}(1)], [box_pts{1}(2), box_pts{2}(2)], 'r--', 'Linewidth', 3, 'DisplayName', 'Safety Margin')
+        %plot([m_low, m_high], gamma_val*[1, 1], 'r--', 'Linewidth', 3, 'DisplayName', 'Safety Margin')
+        
     else
         patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none', 'DisplayName', 'Unsafe Set')
         plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3, 'DisplayName', 'Initial Set')
@@ -268,8 +277,15 @@ if PLOT
     
     %lower bound to maximum (safety margin)
     if LINE_COST                
-        patch('XData',[0, 0, T, T], 'YData',[m_low, m_high, m_high, m_low], ...
-            'ZData', gamma_val*[1,1,1,1], 'FaceColor', 'r', 'FaceAlpha', 0.3, 'DisplayName', 'Safety Margin')
+        %plot([box_pts{1}(1), box_pts{2}(1)], [box_pts{1}(2), box_pts{2}(2)], 'Linewidth', 3, 'DisplayName', 'Safety Margin')
+        YData = [box_pts{1}(1), box_pts{2}(1), box_pts{2}(1), box_pts{1}(1)];
+        ZData = [box_pts{1}(2), box_pts{2}(2), box_pts{2}(2), box_pts{1}(2)];
+        
+        patch('XData',[0, 0, T, T], 'YData',YData, 'ZData', ZData, ...
+            'FaceColor', 'r', 'FaceAlpha', 0.3, 'DisplayName', 'Safety Margin')
+    
+        %patch('XData',[0, 0, T, T], 'YData',[m_low, m_high, m_high, m_low], ...
+        %    'ZData', gamma_val*[1,1,1,1], 'FaceColor', 'r', 'FaceAlpha', 0.3, 'DisplayName', 'Safety Margin')
     else
         [xcyl, ycyl, zcyl] = cylinder(1, 50);
         surf(T*zcyl, Cu(1) + xcyl*Ru, Cu(2) + ycyl*Ru, 'FaceColor', 'r', 'EdgeColor', 'None', 'DisplayName', 'Unsafe Set')
@@ -294,22 +310,8 @@ if PLOT
     p = dual_rec'*vv + obj;
     pval = matlabFunction(p);
     
-    Lp = [diff(p, xc) diff(p, yc)]*fv(tc, [xc, yc]);
+    Lp = diff(p, tc) + [diff(p, xc) diff(p, yc)]*fv(tc, [xc, yc]);
     Lpval = matlabFunction(Lp);
-
-    %evaluate value functions along trajectories
-    for i = 1:Nsample
-        xtc = xtraj{i};
-        xtraj{i}.v = pval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));            
-        xtraj{i}.x_valid = (sum(xtraj{i}.x.^2, 2) <= R^2);
-        xtraj{i}.Lv = Lpval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));                               
-    end
-
-    if rank0 == 1 && rankp == 1
-        xtraj_opt.v = pval(xtraj_opt.t, xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
-        xtraj_opt.x_valid = (sum(xtraj_opt.x.^2, 2) <= R^2);
-        xtraj_opt.Lv = Lpval(xtraj_opt.t, xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
-    end
 
     if ISOSURFACE
         fi = fimplicit3(p, [0, T, m_low, m_high, m_low, m_high], 'MeshDensity',MD, ...
@@ -359,8 +361,20 @@ if PLOT
     
     
         
-    %% compute value functions along trajectories
-        
+    %% compute value functions along trajectories           
+    for i = 1:Nsample        
+        xtraj{i}.v = pval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));            
+        xtraj{i}.x_valid = (sum(xtraj{i}.x.^2, 2) <= R^2);
+        xtraj{i}.Lv = Lpval(xtraj{i}.t, xtraj{i}.x(:, 1),xtraj{i}.x(:, 2));                               
+    end
+
+    if rank0 == 1 && rankp == 1
+        %global optimum trajectory
+        xtraj_opt.v = pval(xtraj_opt.t, xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
+        xtraj_opt.x_valid = (sum(xtraj_opt.x.^2, 2) <= R^2);
+        xtraj_opt.Lv = Lpval(xtraj_opt.t, xtraj_opt.x(:, 1), xtraj_opt.x(:, 2));
+    end
+
         
     figure(4)        
     clf
