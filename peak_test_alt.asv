@@ -33,7 +33,7 @@ Ru = 0.4;
 m_low = -3;
 m_high = 3;
 
-LINE_COST = 0;
+LINE_COST = 1;
 
 
 
@@ -68,7 +68,7 @@ if SOLVE
 
     %d = 2*2;  %degree of relaxation
     %order = input('order of relaxation ='); d = 2*order;
-    order = 5;
+    order = 4;
     d = 2*order;
         
     R = 5;    %radius to contain dynamics
@@ -295,7 +295,7 @@ if PLOT
     pval = matlabFunction(p);
     
     Lp = [diff(p, xc) diff(p, yc)]*fv(tc, [xc, yc]);
-    Lpval = matlabFunction(Lp);
+    Lpval = matlabFunction(p);
 
     %evaluate value functions along trajectories
     for i = 1:Nsample
@@ -371,14 +371,14 @@ if PLOT
     hold on        
     for i = 1:Nsample
         if i == 1
-            plot(xtraj{i}.t(xtraj{i}.x_valid), xtraj{i}.v(xtraj{i}.x_valid), 'c','DisplayName', 'Trajectories')
+            plot(xtraj{i}.t(x_valid), xtraj{i}.v(x_valid), 'c','DisplayName', 'Trajectories')
         else
-            plot(xtraj{i}.t(xtraj{i}.x_valid), xtraj{i}.v(xtraj{i}.x_valid), 'c', 'HandleVisibility','off')
+            plot(xtraj{i}.t(x_valid), xtraj{i}.v(x_valid), 'c', 'HandleVisibility','off')
         end  
     end
 
     if rank0 == 1 && rankp == 1
-        plot(xtraj_opt.t(xtraj_opt.x_valid), xtraj_opt.v(xtraj_opt.x_valid), 'b', 'LineWidth', 2, 'DisplayName', 'Peak Traj.')           
+        plot(xtraj_opt.t(x_opt_valid), xtraj_opt.v(x_opt_valid), 'b', 'LineWidth', 2, 'DisplayName', 'Peak Traj.')           
     end
     %plots
     
@@ -403,7 +403,7 @@ if PLOT
     end
 
     if rank0 == 1 && rankp == 1
-        plot(xtraj_opt.t(xtraj_opt.x_valid), xtraj_opt.Lv(xtraj_opt.x_valid), 'b', 'LineWidth', 2, 'DisplayName', 'Peak Traj.')           
+        plot(xtraj_opt.t(x_opt_valid), xtraj_opt.Lv(x_opt_valid), 'b', 'LineWidth', 2, 'DisplayName', 'Peak Traj.')           
     end
     %plots
     
@@ -412,7 +412,7 @@ if PLOT
     hold off
     title('Change in Safety Function along Trajectories')
     xlabel('time')
-    ylabel('L_f v(x,t)')
+    %ylabel('dv/dx(x,t)')
     legend('location', 'northwest')
     
     
