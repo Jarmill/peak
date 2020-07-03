@@ -7,10 +7,10 @@
 % by Anders Rantzer and Stephen Prajna
 
 %Author: Jared Miller 6/22/20
-SOLVE = 0;
+SOLVE = 1;
 PLOT = 1;
 ISOSURFACE = 1;
-MD = 80; %mesh density of isosurface plot
+MD = 60; %mesh density of isosurface plot
 
 
 %Enable scaling of all variables through mpol/scale (SCALE = 1)
@@ -32,6 +32,7 @@ R0 = 0.4;
 
 %C0 = [1.5; 1];
 %R0 = 0.25;
+%R0 = 0.8;
 
 %unsafe set
 Cu = [-1; -1];
@@ -39,22 +40,23 @@ Ru = 0.4;
 
 %plotting
 %m_low = -1;
-% m_low = -3;
-% m_high = 3;
+m_low = -3;
+m_high = 3;
 
-m_low = -5;
-m_high = 5;
+%m_low = -4;
+%m_high = 4;
 
 %subspace angle
 %theta = 3*pi/2; %(equivalent to maximizing -x(2))
 %theta = pi; %max -x(1)
-theta = 11*pi/8;
+%theta = 11*pi/8;
+theta = 3*pi/4;
 LINE_COST = 1;
 
 %dynamics
 
-%prajna and rantzer
-%fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+%prajna and rantzer flow
+fv = @(t, x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 
 %linear decay
 %fv = @(t, x) [-x(1); -x(1) - x(2)];
@@ -69,10 +71,14 @@ LINE_COST = 1;
 %fv =  @(t, x) [x(2); -1*x(1) - 0.25*x(1)^3];
 
 %van der pol
-fv = @(t, x) [x(2); (1-x(1)^2)*x(2) - x(1)];
+%fv = @(t, x) [x(2); (1-x(1)^2)*x(2) - x(1)];
 
 %predator prey
 %fv = @(t, x) [(2 * x(1) - 4*x(1)*x(2))/3; x(1)*x(2) - x(2)];
+
+%attract to circle r=1
+%fv = @(t, x) [-x(2) + x(1)*(1 - x(1)^2 - x(2)^2); x(1) + x(2)*(1 - x(1)^2 - x(2)^2)];
+
 
 if SOLVE
     %% Parameters for solver    
@@ -80,9 +86,9 @@ if SOLVE
     mset('yalmip',true);
     mset(sdpsettings('solver', 'mosek'));
 
-    %order = input('order of relaxation ='); d = 2*order;
-    order = 5;
-    d = 2*order;
+    order = input('order of relaxation ='); d = 2*order;
+    %order = 3; d = 2*order;
+    
         
     R = 5;    %radius to contain dynamics
     %dynamics are time-independent
@@ -133,11 +139,7 @@ if SOLVE
 
         %unknown moments of initial measure
         y0 = mom(v0);
-        yp = mom(vp);
-
-        
-
-   
+        yp = mom(vp);          
 
 
         %dynamics and time-support   
