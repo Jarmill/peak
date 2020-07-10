@@ -7,10 +7,10 @@
 % by Anders Rantzer and Stephen Prajna
 
 %Author: Jared Miller 6/22/20
-SOLVE = 1;
+SOLVE = 0;
 PLOT = 1;
 ISOSURFACE = 1;
-MD = 60; %mesh density of isosurface plot
+MD = 100; %mesh density of isosurface plot
 
 
 %Enable scaling of all variables through mpol/scale (SCALE = 1)
@@ -19,11 +19,11 @@ SCALE = 0;
 
 
 %Time Range
-%T = 8;
-T = 20;   %final time
+T = 8;
+%T = 20;   %final time
 
 %Are the measures independent of time? mu(x) instead of mu(t, x)
-TIME_INDEP = 1;
+TIME_INDEP = 0;
 
 
 %initial set
@@ -49,8 +49,8 @@ m_high = 3;
 %subspace angle
 %theta = 3*pi/2; %(equivalent to maximizing -x(2))
 %theta = pi; %max -x(1)
-%theta = 11*pi/8;
-theta = 3*pi/4;
+theta = 11*pi/8;
+%theta = 3*pi/4;
 LINE_COST = 1;
 
 %dynamics
