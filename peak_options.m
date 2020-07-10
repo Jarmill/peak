@@ -8,22 +8,28 @@ classdef peak_options < handle
         T(1,1) double{mustBePositive}  = 1;           
         
         %function dynamics
-        f function_handle = @(t,x,w) -x; 
+        f = @(t,x,w) -x; 
+        %future feature: have f handle switched systems. f is an array of
+        %function handles, and there would be a field X_partition of the
+        %switching space        
         
         %objective to minimize
         p function_handle = @(t, x) sum(x.^2);
         
         %% Variables and descriptors
         %variables (array of symbolic variables)
-        t sym = [];     %time
-        x sym = [];     %state
-        w sym = [];     %uncertainty
+%         t sym = [];     %time
+%         x sym = [];     %state
+%         w sym = [];     %uncertainty
+        var = struct('t', [], 'x', [], 'w', []);
+%         P = struct('d', 0, 'e', 1);
         
         %support sets
-        X sym = [];     %all states
-        X0 sym = [];    %initial states
-        XT sym = [];    %final states
-        W sym = [];     %admissable uncertainty
+%         X sym = [];     %all states
+%         X0 sym = [];    %initial states
+%         XT sym = [];    %final states
+%         W sym = [];     %admissable uncertainty
+        supp = struct('X', [], 'X0', [], 'XT', [], 'W', []);
         
         %% additional options
         
