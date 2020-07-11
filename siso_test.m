@@ -4,9 +4,9 @@
 %right now deterministic system
 %then move to uncertainty
 
-nsys = 2;
+nsys = 3;
 
-SOLVE = 1;
+SOLVE = 0;
 PLOT = 1;
 MD = 200; %mesh density for 3d
 Tmax = 20;
@@ -44,7 +44,7 @@ end
 order = 2;
 n = size(sys.A, 1);
 d = 2*order;
-rank_tol = 1e-3;
+rank_tol = 1e-2;
 
 
 mset clear; warning('off','YALMIP:strict')
@@ -164,11 +164,29 @@ if n == 3
     %fi = fimplicit3(p + obj, [xmin(1), xmax(1), xmin(2), xmax(2),xmin(3), xmax(3)], 'MeshDensity',MD, ...
     %        'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
     %        'DisplayName', 'Safety Contour');
+    if rankp == 1
+        scatter3(xp_out(1), xp_out(2), xp_out(3), 100, '*k', 'DisplayName', 'Peak Value', 'LineWidth', 2)
+    end
     zlabel('x_3')
 else
     %n = 2
     plot(xtraj.x(:, 1), xtraj.x(:, 2), 'DisplayName', 'state', 'LineWidth', 3);
     scatter(sys.B(1), sys.B(2), 100, 'ok', 'DisplayName', 'Initial Condition', 'LineWidth', 2)
+    
+    p_neg = line_range([sys.C, -peak_val], [xmin(1), xmax(1)], [xmin(2), xmax(2)]);
+    p_pos = line_range([sys.C, peak_val], [xmin(1), xmax(1)], [xmin(2), xmax(2)]);
+    
+    if rankp == 1
+        scatter(xp_out(1), xp_out(2), 100, '*k', 'DisplayName', 'Peak Value', 'LineWidth', 2)
+    end
+    if ~isempty(p_neg)
+        plot([p_neg{1}(1), p_neg{2}(1)],  [p_neg{1}(2), p_neg{2}(2)], 'r--', 'Linewidth', 3, 'DisplayName', 'Peak Certification')
+    end
+    if ~isempty(p_pos)
+        plot([p_pos{1}(1), p_pos{2}(1)],  [p_pos{1}(2), p_pos{2}(2)], 'r--', 'Linewidth', 3, 'HandleVisibility','off')
+    end
+
+    
     fi2 = fimplicit(p  + obj, [xmin(1), xmax(1), xmin(2), xmax(2)], ...
             ':k', 'DisplayName', 'Peak Contour', 'LineWidth', 3, 'MeshDensity', 150);    
 end
