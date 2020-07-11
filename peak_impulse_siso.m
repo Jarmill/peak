@@ -167,7 +167,7 @@ out.p = p;
 out.pval = pval;
 out.Lp = Lp;
 out.Lpval = Lpval;
-
+out.cost = @(x) (x*C').^2;
 
 end
 

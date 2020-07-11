@@ -44,7 +44,7 @@ elseif nsys == 2
 else
     %second order system
     %true upper bound is p* = 0.645
-%    sys = ss([0 1; -0.5 -1], [0; 1], [1 0], 0);
+    sys = ss([0 1; -0.5 -1], [0; 1], [1 0], 0);
     %sys = ss([0 1; -0.5 -1], [0; 1], [2 1], 0);
 end
 
