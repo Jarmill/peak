@@ -47,11 +47,12 @@ for i = 1:Nsample
     end
 end
 
-title('Switched System Plots')
+title('Linear Switched System (2 subsystems)')
 xlim([-2, 2])
 ylim([-2, 2])
 xlabel('x_1')
 ylabel('x_2')
 scatter(B(1), B(2), 200, 'ok', 'DisplayName', 'Initial Condition', 'LineWidth', 2)
 hold off
+axis square
 legend('location', 'northwest')
