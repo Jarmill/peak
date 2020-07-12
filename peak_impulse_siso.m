@@ -10,9 +10,7 @@ function [peak_val, out] = peak_impulse_siso(A, B, C, order, rank_tol, Tmax)
 %               allow for time-varying safety contours
 %Ouputs:
 %   peak_val:   Maximum absolute value of impulse response
-%   xp_val:     Expectation of optimal point
-%   tp_val:     Expectation of optimal time (or Inf if Tmax = Inf)
-%   Mp_1:       Top corner of moment matrix
+%   out:        Data structure that contains the peak response information   
 
 if nargin < 6
     Tmax = Inf;    
