@@ -19,6 +19,7 @@ if SOLVE
 order = 2;
 ranktol = 0.05;
 
+rng(890);
 
 nsys = 2;    
 if nsys == 1

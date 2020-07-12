@@ -1,8 +1,12 @@
 function [peak_val, out] = peak_impulse_siso(A, B, C, order, rank_tol, Tmax)
 %PEAK_IMPULSE_SISO  Find the maximum value of |Cx| for the impulse response
-%of a SISO linear system with dynamics x'=Ax+Bu, y=Cx.
+%of a SISO linear system that switches between dynamics x'=Ai x+Bu, y=Cx.
+%arbirarily for a set of matrices Ai (simple case where there is only one
+%Ai, standard linear dynamics
 %Input:
-%   A,B,C:      Linear System
+%   A:          Cell of plausible linear dynamics (or just one matrix)
+%   B:          Impulse response -> Initial condition
+%   C:          Output to optimize, max |Cx|
 %   order:      Order of moment relaxation (degree=2*order)
 %   ranktol:    rank tolerance of moment matrixof 
 %   Tmax:       Maximum time. By default is Infinite (time-independent).
@@ -24,9 +28,17 @@ if nargin < 4
     order = 2;
 end
 
+if ~iscell(A)
+    A = {A};
+end
+
 %Parameters of relaxation
-n = size(A, 1);
+n = size(A{1}, 1);
+nsys = length(A);
 d = order*2;
+
+%I know this is invali
+%maxsvd = max(cellfun(@(Ai) svds(Ai, 1), A));
 
 %Gloptipoly Options
 mset clear; warning('off','YALMIP:strict')
@@ -35,45 +47,75 @@ mset(sdpsettings('solver', 'mosek'));
 
 
 %% Set up the measures
-mpol('x', n);  
+mpol('x', n, nsys);  
 mpol('xp', n);  
 
 
-if Tmax == Inf
-    var = x;
-    varp = xp;
-else
-    mpol('t', 1);
-    mpol('tp', 1);
-    var = [t; x];
-    varp = [tp; xp];
-end
+%assume Tmax == Inf, makes life easy
+
+%if Tmax == Inf
+%    var = x;
+%    varp = xp;
+%else
+%    mpol('t', 1, nsys);
+%    mpol('tp', 1);
+%    var = [t; x];
+%    varp = [tp; xp];
+%end
 
 %measures
-mu  = meas(var);   %occupation measure    
-mup = meas(varp); %peak measure
 
-v  = mmon(x, d);
-vp = mmon(xp, d);
-yp = mom(vp);
+
+%occupation measure for each subsystem
+mu = cell(nsys, 1);
+v = cell(nsys, 1);
 
 %Liouville
+%Ayi = cell(nsys, 1);
+Ay = 0;
 
-Ay = mom(diff(v, x)*A*x);
-
-if Tmax ~= Inf
-    Ay = mom(diff(v, t)) + Ay*Tmax;
+%scaling and support
+R = 100; %something large, since joint spectral radius plays havoc
+         %as R reduces, solution grows more accurate
+X = [];
+for i = 1:nsys   
+    xcurr = x(:, i);
+    mu{i} = meas(xcurr);
+    v{i}  = mmon(xcurr, d);
+    
+    %Liouville, mu = sum_mi, L'mu = sum_i Lf' mu_i
+    %Ayi{i} = mom(diff(v, x)*A*x);
+    Ay = Ay + mom(diff(v{i}, xcurr)*A{i}*xcurr);
+    
+    %support
+    X = [X, xcurr'*xcurr <= R];
 end
+%mu  = meas(var);   
+
+
+%peak measure
+%varp = xp;
+%mup = meas(varp); 
+mup = meas(xp);
+vp = mmon(xp, d);
+yp = mom(vp);
+%support
+Xp = (xp'*xp <= R^2);
+
+% 
+% if Tmax ~= Inf
+%     Ay = mom(diff(v, t)) + Ay*Tmax;
+% end
 
 %initial measure
-if Tmax == Inf
+% if Tmax == Inf
     powers = genPowGlopti(n, d);
     y0 = prod((B').^powers, 2);
-else
-    %starts at time 0
-    powers = genPowGlopti(n+1, d);
-    y0 = prod(([0; B]').^powers, 2);
-end
+% else
+%     %starts at time 0
+%    powers = genPowGlopti(n+1, d);
+%     y0 = prod(([0; B]').^powers, 2);
+% end
 
 %% Gloptipoly constraints
 Liou = Ay + (y0 - yp);
@@ -82,15 +124,16 @@ mom_con = (Liou == 0);
 
 %support
 %maximum norm, approximate with magnification (max svd) of A.
-R = 10*svds(A, 1)*norm(B)^2;
+%R = 10*maxsvd*norm(B)^2;
 
-X  = (x'*x <= R^2);
-Xp = (xp'*xp <= R^2);
 
-if Tmax ~= Inf
-    X  = [X, t*(1-t) >= 0];
-    Xp = [Xp, tp*(1-tp) >= 0];
-end
+%X  = (x'*x <= R^2);
+% Xp = (xp'*xp <= R^2);
+% 
+% if Tmax ~= Inf
+%     X  = [X, t*(1-t) >= 0];
+%     Xp = [Xp, tp*(1-tp) >= 0];
+% end
 supp_con = [X, Xp];
 
 cost = (C*xp)^2;
@@ -132,21 +175,30 @@ rankp = rank(Mp_1, rank_tol);
 
 syms xc [n, 1];
 
-if Tmax == Inf
+% if Tmax == Inf
     vv = conj(monolistYalToGlop(xc, d));
     p = dual_rec'*vv;
-    Lp = jacobian(p, xc)*A*xc;
-else
-    syms tc;
+    Lp = cell(nsys, 1);
+    for i = 1:nsys
+        Lp{i} = jacobian(p, xc)*A{i}*xc;
+    end
     
-    vv = conj(monolistYalToGlop([T*tc, xc], d));
-    p = dual_rec'*vv;
-    Lp = diff(p, tc) + jacobian(p, xc)*A*xc;
-end
+    
+% else
+%     syms tc;
+%     
+%     vv = conj(monolistYalToGlop([T*tc, xc], d));
+%     p = dual_rec'*vv;
+%     Lp = diff(p, tc) + jacobian(p, xc)*A*xc;
+% end
 
 
 pval = matlabFunction(p);
-Lpval = matlabFunction(Lp);
+if nsys == 1
+    Lpval = matlabFunction(Lp{1});
+else
+    Lpval = cellfun(@(Lpf) matlabFunction(Lpf), Lp, 'UniformOutput', false);
+end
 
 %% package together outputs
 out = struct;
