@@ -3,44 +3,44 @@ rng(42);
 
 %522, 643 done
 
-% nx = 6;
-% ny = 4;
-% nu = 3;
-% sys = rss(nx, ny, nu);
+nx = 6;
+ny = 1;
+nu = 1;
+sys = rss(nx, ny, nu);
 
-
-%Jet Aircraft from MIMO Matlab tutorial
-A = [-0.0558   -0.9968    0.0802    0.0415
-      0.5980   -0.1150   -0.0318         0
-     -3.0500    0.3880   -0.4650         0
-           0    0.0805    1.0000         0];
-
-B = [ 0.0073         0
-     -0.4750    0.0077
-      0.1530    0.1430
-           0         0];
-
-C = [0     1     0     0
-     0     0     0     1];
-
-D = [0     0
-     0     0];
-
-states = {'beta' 'yaw' 'roll' 'phi'};
-inputs = {'rudder' 'aileron'};
-outputs = {'yaw rate' 'bank angle'};
-
-sys = ss(A,B,C,D,'statename',states,...
-'inputname',inputs,...
-'outputname',outputs);
+% 
+% %Jet Aircraft from MIMO Matlab tutorial
+% A = [-0.0558   -0.9968    0.0802    0.0415
+%       0.5980   -0.1150   -0.0318         0
+%      -3.0500    0.3880   -0.4650         0
+%            0    0.0805    1.0000         0];
+% 
+% B = [ 0.0073         0
+%      -0.4750    0.0077
+%       0.1530    0.1430
+%            0         0];
+% 
+% C = [0     1     0     0
+%      0     0     0     1];
+% 
+% D = [0     0
+%      0     0];
+% 
+% states = {'beta' 'yaw' 'roll' 'phi'};
+% inputs = {'rudder' 'aileron'};
+% outputs = {'yaw rate' 'bank angle'};
+% 
+% sys = ss(A,B,C,D,'statename',states,...
+% 'inputname',inputs,...
+% 'outputname',outputs);
 
 nx = size(sys.A, 1);
 ny = size(sys.C, 1);
 nu = size(sys.B, 2);
 
 
-SOLVE = 0;
-PLOT_CONTOUR = 0;
+SOLVE = 1;
+PLOT_CONTOUR = 1;
 PLOT_VALUES  = 1;
 PLOT = PLOT_CONTOUR || PLOT_VALUES;
 
@@ -51,7 +51,7 @@ trange = [0, Tmax_plot];
 if SOLVE
     order = 2;
     
-    [peak_val, out] = peak_impulse_mimo(A, B, C, order);        
+    [peak_val, out] = peak_impulse_mimo(sys.A, sys.B, sys.C, order);        
 end
 
 if PLOT
