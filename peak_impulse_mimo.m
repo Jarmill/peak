@@ -27,9 +27,14 @@ end
 
 %Parameters of relaxation
 
-nx = size(A, 1);
+if ~iscell(A)
+    A = {A};
+end
+
+nx = size(A{1}, 1);
 ny = size(C, 1);
 nu = size(B, 2);
+nsys = length(A);
 d = order*2;
 
 opt = cell(ny, nu);

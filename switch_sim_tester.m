@@ -18,14 +18,30 @@ nsys = length(A);
 %A_func is the set of functions x -> Ai x for each Ai in A
 A_func = cellfun(@(Ai) (@(t, x) Ai*x), A, 'UniformOutput', false);
 
-B = [1; 1];
-C = [1 3];
+MIMO = 0;
+
+if MIMO    
+    B = [1 0; 1 -1];
+    C = [1 3; 2 0; -1 -1; 0 1];
+else
+    B = [1; 1];
+    C = [1 3];
+end
+
+nx = size(A{1});
+nu = size(B, 2);
+ny = size(C, 2);
 
 %will eventually want to compute peak response of this system
 %try to evaluate the peak response
 if SOLVE
     order = 4;
-    [peak_val, opt] = peak_impulse_siso(A, B, C, order);
+    
+    if MIMO 
+        [peak_val, opt] = peak_impulse_mimo(A, B, C, order);
+    else
+        [peak_val, opt] = peak_impulse_siso(A, B, C, order);
+    end
 end
 
 %% Simulations
