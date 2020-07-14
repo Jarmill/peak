@@ -49,4 +49,10 @@ mass(m0)==1, ...
 Ay==yT-y0, ...
 X, X0, XT, B);
 % solve LMI moment problem
-[status,obj] = msol(P)
+[status,obj] = msol(P);
+
+
+scale(x1, 4);
+scale(x2, 4);
+scale(x3, 4);
+[status_scale,obj_scale] = msol(P);
