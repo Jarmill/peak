@@ -6,7 +6,7 @@
 %f2 = @(x) [1 2; -3 -2]*x;
 rng(45)
 SOLVE = 1;
-SAMPLE = 0;
+SAMPLE = 1;
 PLOT = 1;
 
 %2d example. Will generalize
@@ -18,15 +18,8 @@ nsys = length(A);
 %A_func is the set of functions x -> Ai x for each Ai in A
 A_func = cellfun(@(Ai) (@(t, x) Ai*x), A, 'UniformOutput', false);
 
-MIMO = 0;
-
-if MIMO    
-    B = [1 0; 1 -1];
-    C = [1 3; 2 0; -1 -1; 0 1];
-else
-    B = [1; 1];
-    C = [1 3];
-end
+B = [1; 1];
+C = [1 3];
 
 nx = size(A{1});
 nu = size(B, 2);
@@ -37,11 +30,8 @@ ny = size(C, 2);
 if SOLVE
     order = 4;
     
-    if MIMO 
-        [peak_val, opt] = peak_impulse_mimo(A, B, C, order);
-    else
-        [peak_val, opt] = peak_impulse_siso(A, B, C, order);
-    end
+    [peak_val, opt] = peak_impulse_siso(A, B, C, order);
+
 end
 
 %% Simulations

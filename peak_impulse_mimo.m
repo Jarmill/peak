@@ -52,6 +52,7 @@ for j = 1:ny
     end
 end
 
+peak_y = max(peak_val, [], 2);
 [peak_all, ind_max] = max(peak_val(:));
 [j_max, i_max] = ind2sub([ny, nu], ind_max);
 opt_max = opt{j_max, i_max};
@@ -60,6 +61,8 @@ opt_max = opt{j_max, i_max};
 
 out = struct;
 out.peak_val = peak_val;
+out.peak_all = peak_all;
+out.peak_y = peak_y;
 out.opt = opt;
 out.opt_max = opt_max;
 out.peak_all = peak_all;
