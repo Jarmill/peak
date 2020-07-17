@@ -1,12 +1,12 @@
-%sys = ss([0 1; -0.5 -1], [0 1; 1 1], [1 0;  0 1], 0);
+sys = ss([0 1; -0.5 -1], [0 1; 1 1], [1 0;  0 1], 0);
 rng(42);
 
 %522, 643 done
 
-nx = 6;
-ny = 1;
-nu = 1;
-sys = rss(nx, ny, nu);
+%nx = 6;
+%ny = 1;
+%nu = 1;
+%sys = rss(nx, ny, nu);
 
 % 
 % %Jet Aircraft from MIMO Matlab tutorial

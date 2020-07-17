@@ -48,6 +48,7 @@ mset(sdpsettings('solver', 'mosek'));
 
 %% Set up the measures
 mpol('x', n, nsys);  
+%mpol('x', n, 1);  
 mpol('xp', n);  
 
 
@@ -80,6 +81,7 @@ R = 100; %something large, since joint spectral radius plays havoc
 X = [];
 for i = 1:nsys   
     xcurr = x(:, i);
+    %xcurr = x;
     mu{i} = meas(xcurr);
     v{i}  = mmon(xcurr, d);
     

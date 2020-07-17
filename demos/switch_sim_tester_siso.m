@@ -19,7 +19,8 @@ nsys = length(A);
 A_func = cellfun(@(Ai) (@(t, x) Ai*x), A, 'UniformOutput', false);
 
 B = [1; 1];
-C = [1 3];
+%C = [1 3];
+C = [1 0];
 
 nx = size(A{1});
 nu = size(B, 2);
@@ -28,10 +29,9 @@ ny = size(C, 2);
 %will eventually want to compute peak response of this system
 %try to evaluate the peak response
 if SOLVE
-    order = 4;
+    order = 3;    
     
     [peak_val, opt] = peak_impulse_siso(A, B, C, order);
-
 end
 
 %% Simulations
@@ -92,7 +92,7 @@ if PLOT
     p_neg = line_range([C, -opt.peak_val], [-2, 2], [-2, 2]);
     p_pos = line_range([C, opt.peak_val],  [-2, 2], [-2, 2]);
     if opt.rankp == 1
-        scatter(xp_out(1), xp_out(2), 100, '*k', 'DisplayName', 'Peak Value', 'LineWidth', 2)
+        scatter(opt.xp(1), opt.xp(2), 100, '*k', 'DisplayName', 'Peak Value', 'LineWidth', 2)
     end
     if ~isempty(p_neg)
         plot([p_neg{1}(1), p_neg{2}(1)],  [p_neg{1}(2), p_neg{2}(2)], 'r--', 'Linewidth', 3, 'DisplayName', 'Peak Certification')

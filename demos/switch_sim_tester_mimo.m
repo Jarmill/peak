@@ -11,8 +11,9 @@ PLOT = 1;
 
 %2d example. Will generalize
 
+A = {[0 2; -1 -1]};
 %A = {[0 2; -1 -1], [1 2; -3 -2]};
-A = {[0 2; -1 -1], [1 2; -3 -2], [-1 0; 1 -0.5]};
+%A = {[0 2; -1 -1], [1 2; -3 -2], [-1 0; 1 -0.5]};
 nsys = length(A);
 
 %i'm surprised this functional junk works
@@ -20,14 +21,16 @@ nsys = length(A);
 A_func = cellfun(@(Ai) (@(t, x) Ai*x), A, 'UniformOutput', false);
 
 %Input
-%B = [1; 1];
-B = [1 -1; 1 0];
+B = [1; 1];
+
+%B = [1 -1 0; 1 0 1.5];
 %B = [1 -1 -0.5; 1 0 1];
 %B = [1 0.8 1; 1 -0.5 -1];
 
 %Output
 %C = [1 3];
-C = [1 3; 1 0];
+%C = [1 3; 1 0];
+C = [1 0];
 %C = [1 0];
 %C = [1 3; -1 0; 0 1; -1 1];
 %C = C ./ sqrt(sum(C.^2, 1)); %normalize?
@@ -52,7 +55,7 @@ if SAMPLE
     Tmax = 20;  %Maximum time to plot
     
     CORNER_SAMPLE = 20; %number of samples at corners
-    Nsammple = nu*CORNER_SAMPLE + 60;
+    Nsample = nu*CORNER_SAMPLE + 60;
     %Nsample = 70; %number of trajectories
     
 
