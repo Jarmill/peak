@@ -35,12 +35,13 @@ classdef peak_options < handle
         
         %(X, T): Xt is the support of trajectories at time Tt
         %W:      Plausible Uncertainties (default to 0)
-        state_fix = struct('X', [], 'T', 0)
-        
+        %state_fix = struct('X', [], 'T', 0)
+        state_init = [];
+        state_supp = [];
         param = [];        
         
         %% additional options
-        
+                
         %should the measures be time-independent?
         %TIME_INDEP(1,1) logical = true; 
         

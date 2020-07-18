@@ -138,11 +138,6 @@ mom_con = (Liou == 0);
 % end
 supp_con = [X, Xp];
 
-cost = (C*xp)^2;
-
-objective = max(cost);
-
-
 %% Solve the Problem
 cost = (C*xp)^2;
 

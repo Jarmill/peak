@@ -47,10 +47,10 @@ m_high = 3;
 %m_high = 4;
 
 %subspace angle
-%theta = 3*pi/2; %(equivalent to maximizing -x(2))
+theta = 3*pi/2; %(equivalent to maximizing -x(2))
 %theta = pi; %max -x(1)
 %theta = 11*pi/8;
-theta = 3*pi/4;
+%theta = 3*pi/4;
 LINE_COST = 1;
 
 %dynamics
@@ -86,8 +86,8 @@ if SOLVE
     mset('yalmip',true);
     mset(sdpsettings('solver', 'mosek'));
 
-    order = input('order of relaxation ='); d = 2*order;
-    %order = 3; d = 2*order;
+    %order = input('order of relaxation ='); d = 2*order;
+    order = 3; d = 2*order;
     
         
     R = 5;    %radius to contain dynamics

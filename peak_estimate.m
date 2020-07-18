@@ -53,34 +53,37 @@ function [out] = peak_estimate(options, order)
 %   Lv:         Lie derivatives along trajectories of system for v
 
 if nargin < 2
-    order = 2;
+    order = 3;
 end
 d = 2*order;
 
 %% Process option data structure
+mset clearmeas
 
 %state variable
-xs = p_opt.var.x;
-nx = length(xs);
+nx = length(options.var.x);
+nvar = nx;
 
 %time variable
-if ~isempty(p_opt.var.t)
-    ts = p_opt.var.t;
+if ~isempty(options.var.t)
+    nvar = nvar + 1;
+    %TIME_INDEP = 0;
 else
-    ts = 0;
+    %TIME_INDEP = 1;
 end
 
 %parameter variables
-if ~isempty(p_opt.var.w)
-    PARAM = 1;
-    ws = p_opt.var.w;
-    %Wsupp_f = matlabFunction(p_opt.param);
-else
-    PARAM = 0;
+if ~isempty(options.var.w)    
+    %ws = ;
+    nw = length(options.var.w);
+    nvar = nvar + nw;
+    %Wsupp_f = matlabFunction(options.param);
+%else
+    %nw = 0;    
 end
 
 %Time independent measures if valid
-if isempty(p_opt.var.t) || p_opt.Tmax = Inf
+if isempty(options.var.t) || options.Tmax == Inf
     TIME_INDEP = 1;
 else
     TIME_INDEP = 0;
@@ -88,22 +91,25 @@ end
 
 
 %number of switching subsystems
-if iscell(p_opt.dynamics.f)
-    nsys = length(p_opt.dynamics.f);
+if iscell(options.dynamics.f)
+    nsys = length(options.dynamics.f);
 else
     nsys = 1;
+    options.dynamics.f = {options.dynamics.f};
+    options.dynamics.X = {options.dynamics.X};
 end
 
 %number of objectives (1 standard, 2+ minimum)
-nobj = length(p_opt.obj);
+nobj = length(options.obj);
 
 %number of times at which the space support is specified
-if iscell(p_opt.state_fix.X)
-    nbreaks = length(p_opt.state_fix.X);
-    time_breaks = p_opt.state_fix.T;
-else
-    nbreaks = 1;
-end
+%do this later
+% if iscell(options.state_fix.X)
+%     nbreaks = length(options.state_fix.X);
+%     time_breaks = options.state_fix.T;
+% else
+%     nbreaks = 1;
+% end
 
 
 %% Measures and variables
@@ -111,25 +117,44 @@ end
 %start with no time breaks, one initial measure
 %one occupation measure per switched systems
 %one peak measure
-x_occ = mpol('xocc', [nx, nsys]);
+mpol('x_occ', nx, nsys);
 
-xp = mpol('xp', [nx, 1]);
+%mpol('xp', nx, 1);
+%Xp = subs(options.state_supp, options.var.x, xp);
+xp = options.var.x;
+Xp = options.state_supp;
+%deal with hanging variables and measures by letting the original x be the
+%peak measure
 
 %replace with time breaks
-x0 = mpol('x0', [nx, 1]);
+mpol('x0', nx, 1);
+X0 = subs(options.state_init, options.var.x, x0);
 
 mu = cell(nsys, 1);
 v = cell(nsys, 1);
+Ay = 0;
+%X = cell(nsys, 1);
+X_occ = []; %support
 
-if TIME_INDEP
-           
+%measure information
+if TIME_INDEP           
     mup = meas(xp);
+    vp = mmon(xp, d);
+    yp = mom(vp);
+    
     mu0 = meas(x0);
-    [mu, X, Ay] = occupation_measure(f, X, var, x_occ, d)
+    v0 = mmon(x0, d);
+    y0 = mom(v0);
+    
+    %[mu, X, Ay] = occupation_measure(f, X, options.var, x_occ, d)
     for i = 1:nsys
         xcurr = x_occ(:, i);
-        mu{i} = meas(xcurr);
-        v{i}  = mmon(xcurr, d);
+        
+        [mu{i}, X_occ_curr, Ay_curr] = occupation_measure(options.dynamics.f{i}, ...
+            options.dynamics.X{i}, options.var, xcurr, d);
+        
+        X_occ = [X_occ; X_occ_curr];
+        Ay = Ay + Ay_curr;
     end
 else
     %not actually sure, maybe all switching occupation measures have the same titme
@@ -148,26 +173,123 @@ else
     
 end
 
+%% Form Constraints and Solve Problem
 
+supp_con = [X0; Xp; X_occ];
+%careful of monic substitutions ruining dual variables
+mom_con = [mass(mu0) == 1; Ay + y0 == yp];
 
+if nobj == 1
+    cost = subs(options.obj, options.var.x, xp);
+else
+    %add a new measure for the cost
+    %honestly I only want a free variable, so bounds on support are not
+    %necessary. The free variable is the off-diagonal entry of a 2x2 psd
+    %matrix with top corner 1. Inefficient, but that's how gloptipoly is
+    %interfaced.
+    
+    mpol('c');
+    muc = meas(c);
+    momc = mom(c);
+    cost = momc;
+    
+    for i = 1:nobj
+        curr_obj = subs(options.obj(i), var.x, xp);
+        curr_mom_con = (momc <= mom(curr_obj));
+        mom_con = [mom_con; curr_mom_con];        
+    end       
+end
 
+objective = max(cost);
 
 %% Solve program and extract results
+%set up problem
+mset('yalmip',true);
+mset(sdpsettings('solver', 'mosek'));
+
+P = msdp(objective, ...
+    mom_con, supp_con);
+
+
+
+%solve LMI moment problem    
+
+%for the flow problem, peak_test_alt has 1 substitution
+%this script has 2 moment substitutions, so dual_rec does not have the same
+%size as the vernoese map vv. I can't see a difference. What is going on?
+[status,obj_rec, m,dual_rec]= msol(P);
+
+M0 = double(mmat(mu0));
+Mp = double(mmat(mup));
+if nobj > 1
+    Mc = double(mmat(muc));
+end
+%1, t, x1, x2
+M0_1 = M0(1:(nvar+1), 1:(nvar+1));
+Mp_1 = Mp(1:(nvar+1), 1:(nvar+1));
+
+rank0 = rank(Mp_1, options.rank_tol);
+rankp = rank(M0_1, options.rank_tol);
+
+
+
+x0_rec = double(mom(x0));
+xp_rec = double(mom(xp));
+% 
+% if ~TIME_INDEP    
+%     tp_out = T*double(mom(tp));
+% end
+
+%set up dual variable
+syms xc [nx, 1]
+%scaling with t
+%vv = monolist([tc/T; xc; yc], d);
+%vv = conj(monolistYalToGlop([tc/T; xc; yc], d));
+if TIME_INDEP
+    vv = conj(monolistYalToGlop(xc, d));
+else
+    syms tc
+    vv = conj(monolistYalToGlop([tc; xc], d));    
+end
+
+%recovered dual variables from msdp, correspond to the free
+%variables in the sedumi problem
+
+%set up polynomials
+p = dual_rec'*vv;
+Lp = cell(nsys, 1);
+for i = 1:nsys
+    Lp{i} = jacobian(p, xc)*options.dynamics.f{i}(xc);
+end
+
+%turn into functions
+pval = matlabFunction(p);
+if nsys == 1
+    Lpval = matlabFunction(Lp{1});
+else
+    Lpval = cellfun(@(Lpf) matlabFunction(Lpf), Lp, 'UniformOutput', false);
+end
+
+
+%Lp = diff(p, tc) + [diff(p, xc) diff(p, yc)]*fv(tc, [xc, yc]);
+%Lpval = matlabFunction(Lp);
 
 
 %% Output results to data structure
-out = 1;
+%out = 1;
 
-% out = struct;
-% out.peak_val = peak_val;
-% out.optimal = optimal;
-% out.x0 = x0_rec;
-% out.xp = xp_rec;
-% out.Mfix = {};
-% out.Mp = [];
-% 
-% out.v = 0;
-% out.Lv = 0;
+out = struct;
+out.peak_val = -obj_rec;
+out.optimal = (rank0 == 1) && (rankp == 1);
+out.x0 = x0_rec;
+out.xp = xp_rec;
+out.M0 = M0_1;
+out.Mp = Mp_1;
+
+out.v = p;
+out.Lv = Lp;
+out.vval = pval;
+out.Lvval = Lpval;
 
 %% Done!
 
@@ -176,7 +298,7 @@ end
 function [mu, X_occ, Ay] = occupation_measure(f, X, var, x_occ, d)
 %form the occupation measure
 %Input:
-%   f:      Dynamics (polynomial)
+%   f:      Dynamics (function)
 %   X:      Support set upon which dynamics take place
 %   var:    variables of problem
 %   x_occ:  New variables for occupation measure
@@ -189,7 +311,8 @@ function [mu, X_occ, Ay] = occupation_measure(f, X, var, x_occ, d)
 
     var_all = [var.t; x_occ; var.w];
 
-    f_occ = subs(f, var.x, x_occ);
+    %f_occ = subs(f, var.x, x_occ);
+    f_occ = f(var_all);
     
     mu = meas(var_all);
     v = mmon(var_all, d);

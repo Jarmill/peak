@@ -92,7 +92,8 @@ if SOLVE
     X  = [x'*x <= R^2];
     Xp = [xp'*xp <= R^2];
     X0 = [(x0(1)-1.5)^2 + x0(2)^2 <= 0.25]; 
-    Xc = [-(c - c_range(1))*(c - c_range(2))>=0];
+    %Xc = [-(c - c_range(1))*(c - c_range(2))>=0];
+    Xc = [];
    
    
     
