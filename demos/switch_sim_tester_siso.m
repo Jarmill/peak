@@ -132,7 +132,7 @@ if PLOT
     title('Safety Function along Trajectories', 'FontSize', FS)
     xlabel('time')
     ylabel('v(x) - \gamma')
-%     legend('location', 'northwest')
+    legend('location', 'northwest')
     
 %     subplot(3,1,2)
     
