@@ -16,3 +16,4 @@ R = 1;
 
 order = 2;
 [peak_val, out] = peak_lin_control(sys.A, sys.B, K, X0, order);
+

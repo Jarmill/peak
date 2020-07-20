@@ -66,7 +66,7 @@ for i = 1:nx0
     end
 end
 
-[peak_val, ind_max] = max(peak_val, [], 1);
+[peak_max, ind_max] = max(peak_val, [], 1);
 
 opt_max = cell(nu, 1);
 optimal = zeros(nu, 1);
