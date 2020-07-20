@@ -62,7 +62,9 @@ if SOLVE
     order = 2;
 
     [peak_val, opt] = peak_impulse_siso(Ac, Bc, Cc, order);
+    [peak_val2, opt2] = peak_lin_control(A, B, K, X0, order);
 end
+
 
 %% Simulations
 if SAMPLE

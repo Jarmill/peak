@@ -206,6 +206,7 @@ out.tp = tp_out;
 out.Mp_1 = Mp_1;
 out.Mp = Mp;
 out.rankp = rankp;
+out.optimal = (rankp == 1);
 
 %level set: out.p + out.obj = 0
 
