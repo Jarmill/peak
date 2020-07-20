@@ -1,4 +1,4 @@
-function [peak_val, out] = peak_impulse_siso(A, B, C, order, rank_tol, Tmax)
+function [peak_val, out] = peak_impulse_siso(A, B, C, order, signed, rank_tol, Tmax)
 %PEAK_IMPULSE_SISO  Find the maximum value of |Cx| for the impulse response
 %of a SISO linear system that switches between dynamics x'=Ai x+Bu, y=Cx.
 %arbirarily for a set of matrices Ai (simple case where there is only one
@@ -8,7 +8,8 @@ function [peak_val, out] = peak_impulse_siso(A, B, C, order, rank_tol, Tmax)
 %   B:          Impulse response -> Initial condition
 %   C:          Output to optimize, max |Cx|
 %   order:      Order of moment relaxation (degree=2*order)
-%   ranktol:    rank tolerance of moment matrixof 
+%   signed:     max (Cx) (signed=1) or |Cx| (signed=0, default)
+%   ranktol:    rank tolerance of moment matrix
 %   Tmax:       Maximum time. By default is Infinite (time-independent).
 %               Tmax ~= Inf will recover optimal time at optimality, and
 %               allow for time-varying safety contours
@@ -16,12 +17,16 @@ function [peak_val, out] = peak_impulse_siso(A, B, C, order, rank_tol, Tmax)
 %   peak_val:   Maximum absolute value of impulse response
 %   out:        Data structure that contains the peak response information   
 
-if nargin < 6
+if nargin < 7
     Tmax = Inf;    
 end
 
-if nargin < 5
+if nargin < 6
     rank_tol = 1e-3;
+end
+
+if nargin < 5
+    signed = 0;
 end
 
 if nargin < 4
@@ -139,7 +144,11 @@ mom_con = (Liou == 0);
 supp_con = [X, Xp];
 
 %% Solve the Problem
-cost = (C*xp)^2;
+if signed
+    cost = C*xp;
+else
+    cost = (C*xp)^2;
+end
 
 objective = max(cost);
 

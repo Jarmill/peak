@@ -1,11 +1,12 @@
-function [peak_all, out] = peak_impulse_mimo(A, B, C, order, rank_tol, Tmax)
+function [peak_all, out] = peak_impulse_mimo(A, B, C, order, signed, rank_tol, Tmax)
 %PEAK_IMPULSE_MIMO  Find the maximum value of max|C_j x| for each
 %input-outpupt impulse response of a MIMO linear system with dynamics 
 %       x'=Ax+Bu, y=Cx.
 %Input:
 %   A,B,C:      Linear System
 %   order:      Order of moment relaxation (degree=2*order)
-%   ranktol:    rank tolerance of moment matrixof 
+%   signed:     max (Cjx) (signed=1) or |Cjx| (signed=0, default)
+%   ranktol:    rank tolerance of moment matrix
 %   Tmax:       Maximum time. By default is Infinite (time-independent).
 %               Tmax ~= Inf will recover optimal time at optimality, and
 %               allow for time-varying safety contours
@@ -13,12 +14,16 @@ function [peak_all, out] = peak_impulse_mimo(A, B, C, order, rank_tol, Tmax)
 %   peak_val:   Maximum absolute value of impulse response
 %   out:        Data structure that contains the peak response information
 
-if nargin < 6
+if nargin < 7
     Tmax = Inf;    
 end
 
-if nargin < 5
+if nargin < 6
     rank_tol = 1e-3;
+end
+
+if nargin < 5
+    signed = 0;
 end
 
 if nargin < 4
