@@ -1,4 +1,4 @@
-function [peak_max, out] = peak_lin_sys(Acl, F, X0, order, rank_tol, Tmax)
+function [peak_max, out] = peak_lin_sys(Acl, F, X0, order, signed, rank_tol, Tmax)
 %PEAK_LIN_SYS Find the maximum absolute value of any element of a query 
 %F*x for a linear system x' = Acl x, where x starts in the convex hull of
 %initial points X0. (closed-loop if controller is applied, so Acl = A - B K)
@@ -66,7 +66,7 @@ for i = 1:nx0
         Ccl = Fj;
         
         %run peak code on I/O pair (i, j)
-        [peak_val_curr, opt_curr] = peak_impulse_siso(Acl, Bcl, Ccl, order, signed);
+        [peak_val_curr, opt_curr] = peak_impulse_siso(Acl, Bcl, Ccl, order, signed, rank_tol, Tmax);
         peak_val(i, j) = peak_val_curr;
         opt{i, j} = opt_curr;
     end
@@ -76,11 +76,12 @@ end
 
 opt_max = cell(nf, 1);
 optimal = zeros(nf, 1);
-
+time_max = zeros(nf, 1);
 for j = 1:nf
     
     opt_max{j} = opt{ind_max(j), j};
     optimal(j) = opt_max{j}.optimal;
+    time_max(j) = opt_max{j}.tp;
 end
 
 %package to output
@@ -90,7 +91,7 @@ out.peak_max = peak_max;
 out.opt = opt;
 out.opt_max = opt_max;
 out.optimal = optimal;
-
+out.time_max = time_max;
 
 
 

@@ -53,22 +53,23 @@ mset(sdpsettings('solver', 'mosek'));
 
 %% Set up the measures
 mpol('x', n, nsys);  
-%mpol('x', n, 1);  
 mpol('xp', n);  
 
 
 %assume Tmax == Inf, makes life easy
+%no longer
 
-%if Tmax == Inf
-%    var = x;
-%    varp = xp;
-%else
-%    mpol('t', 1, nsys);
-%    mpol('tp', 1);
-%    var = [t; x];
-%    varp = [tp; xp];
-%end
-
+if Tmax == Inf
+   var = x;
+   varp = xp;
+   
+else
+   mpol('t', 1, nsys);
+   mpol('tp', 1);
+   var = [t; x];
+   varp = [tp; xp];
+end
+mup = meas(varp);
 %measures
 
 
@@ -81,21 +82,33 @@ v = cell(nsys, 1);
 Ay = 0;
 
 %scaling and support
-R = 100; %something large, since joint spectral radius plays havoc
-         %as R reduces, solution grows more accurate
+R = 10; %something large, since joint spectral radius plays havoc
+         %as R reduces, solution grows more accurate, adjust later
 X = [];
 for i = 1:nsys   
     xcurr = x(:, i);
     %xcurr = x;
-    mu{i} = meas(xcurr);
-    v{i}  = mmon(xcurr, d);
-    
-    %Liouville, mu = sum_mi, L'mu = sum_i Lf' mu_i
-    %Ayi{i} = mom(diff(v, x)*A*x);
-    Ay = Ay + mom(diff(v{i}, xcurr)*A{i}*xcurr);
+    if Tmax == Inf
+        mu{i} = meas(xcurr);
+        v{i}  = mmon(xcurr, d);
+
+        %Liouville, mu = sum_mi, L'mu = sum_i Lf' mu_i
+        %Ayi{i} = mom(diff(v, x)*A*x);
+        Ay = Ay + mom(diff(v{i}, xcurr)*A{i}*xcurr);
+    else
+        tcurr = t(:, i);
+        
+        mu{i} = meas([tcurr; xcurr]);
+        v{i}  = mmon([tcurr; xcurr], d);
+
+        %Liouville, mu = sum_mi, L'mu = sum_i Lf' mu_i
+        %Ayi{i} = mom(diff(v, x)*A*x);
+        Ay = Ay + mom(diff(v{i}, xcurr)*A{i}*xcurr + diff(v{i}, tcurr));
+        X = [X, tcurr*(Tmax - tcurr) >= 0];
+    end
     
     %support
-    X = [X, xcurr'*xcurr <= R];
+    X = [X, xcurr'*xcurr <= R^2];
 end
 %mu  = meas(var);   
 
@@ -103,26 +116,32 @@ end
 %peak measure
 %varp = xp;
 %mup = meas(varp); 
-mup = meas(xp);
-vp = mmon(xp, d);
-yp = mom(vp);
-%support
-Xp = (xp'*xp <= R^2);
 
+if Tmax == Inf
+    vp = mmon(xp, d);
+    yp = mom(vp);
+    %support
+    Xp = (xp'*xp <= R^2);
+else
+    vp = mmon([tp; xp], d);
+    yp = mom(vp);
+    %support
+    Xp = [xp'*xp <= R^2, tp * (Tmax - tp) >= 0];    
+end
 % 
 % if Tmax ~= Inf
 %     Ay = mom(diff(v, t)) + Ay*Tmax;
 % end
 
 %initial measure
-% if Tmax == Inf
+if Tmax == Inf
     powers = genPowGlopti(n, d);
     y0 = prod((B').^powers, 2);
-% else
-%     %starts at time 0
-%    powers = genPowGlopti(n+1, d);
-%     y0 = prod(([0; B]').^powers, 2);
-% end
+else
+    %starts at time 0
+   powers = genPowGlopti(n+1, d);
+    y0 = prod(([0; B]').^powers, 2);
+end
 
 %% Gloptipoly constraints
 Liou = Ay + (y0 - yp);
@@ -133,14 +152,6 @@ mom_con = (Liou == 0);
 %maximum norm, approximate with magnification (max svd) of A.
 %R = 10*maxsvd*norm(B)^2;
 
-
-%X  = (x'*x <= R^2);
-% Xp = (xp'*xp <= R^2);
-% 
-% if Tmax ~= Inf
-%     X  = [X, t*(1-t) >= 0];
-%     Xp = [Xp, tp*(1-tp) >= 0];
-% end
 supp_con = [X, Xp];
 
 %% Solve the Problem
@@ -181,22 +192,22 @@ rankp = rank(Mp_1, rank_tol);
 
 syms xc [n, 1];
 
-% if Tmax == Inf
+if Tmax == Inf
     vv = conj(monolistYalToGlop(xc, d));
     p = dual_rec'*vv;
     Lp = cell(nsys, 1);
     for i = 1:nsys
         Lp{i} = jacobian(p, xc)*A{i}*xc;
     end
+else
+    syms tc;
     
-    
-% else
-%     syms tc;
-%     
-%     vv = conj(monolistYalToGlop([T*tc, xc], d));
-%     p = dual_rec'*vv;
-%     Lp = diff(p, tc) + jacobian(p, xc)*A*xc;
-% end
+    vv = conj(monolistYalToGlop([tc; xc], d));
+    p = dual_rec'*vv;
+    for i = 1:nsys
+        Lp{i} = jacobian(p, xc)*A{i}*xc + diff(p, tc);
+    end
+end
 
 
 pval = matlabFunction(p);
@@ -224,7 +235,11 @@ out.p = p;
 out.pval = pval;
 out.Lp = Lp;
 out.Lpval = Lpval;
-out.cost = @(x) (x*C').^2;
+if signed
+    out.cost = @(x) x*C';
+else
+    out.cost = @(x) (x*C').^2;
+end
 
 end
 

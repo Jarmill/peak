@@ -51,7 +51,7 @@ for j = 1:ny
         Bi = B(:, i);
 
         %run peak code on I/O pair (i, j)
-        [peak_val_curr, opt_curr] = peak_impulse_siso(A, Bi, Cj, order);
+        [peak_val_curr, opt_curr] = peak_impulse_siso(A, Bi, Cj, order, signed, rank_tol, Tmax);
         peak_val(j, i) = peak_val_curr;
         opt{j, i} = opt_curr;
     end
