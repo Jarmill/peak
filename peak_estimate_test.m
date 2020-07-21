@@ -18,8 +18,11 @@ mpol('x', 2, 1);
 
 %dynamics and support set
 %prajna and rantzer flow
-%f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
-f = @(x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+
+%go back to functions
+%and/or figure out how to extract monomials and powers from mpol
+f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+%f = @(x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 
 R = 5;
 X = (sum(x.^2) <= R^2);
@@ -39,7 +42,12 @@ objective = -x(2);
 %
 p_opt = peak_options;
 p_opt.var.x = x;
+
 p_opt.dynamics = dynamics;
+%p_opt.dynamics.f = f;
+%p_opt.dynamics.X = X;
+
+
 p_opt.state_init = X0;
 p_opt.state_supp = X;
 %p_opt.state_fix.X = X0;

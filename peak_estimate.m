@@ -73,22 +73,8 @@ else
 end
 
 %parameter variables
-if ~isempty(options.var.w)    
-    %ws = ;
-    nw = length(options.var.w);
-    nvar = nvar + nw;
-    %Wsupp_f = matlabFunction(options.param);
-%else
-    %nw = 0;    
-end
-
-%Time independent measures if valid
-if isempty(options.var.t) || options.Tmax == Inf
-    TIME_INDEP = 1;
-else
-    TIME_INDEP = 0;
-end
-
+nw = length(options.var.w);
+nvar = nvar + nw;
 
 %number of switching subsystems
 if iscell(options.dynamics.f)
@@ -96,8 +82,21 @@ if iscell(options.dynamics.f)
 else
     nsys = 1;
     options.dynamics.f = {options.dynamics.f};
-    options.dynamics.X = {options.dynamics.X};
+    options.dynamics.X = {options.dynamics.X};    
 end
+
+%time range of states
+if ~isfield(options.dynamics, 'Tmin') || isempty(options.dynamics.Tmin)
+    options.dynamics.Tmin = zeros(nsys, 1);
+    options.dynamics.Tmax = ones(nsys, 1)*options.Tmax;
+end
+
+if isempty(options.var.t) || options.Tmax == Inf
+    TIME_INDEP = 1;   
+else
+    TIME_INDEP = 0;    
+end
+
 
 %number of objectives (1 standard, 2+ minimum)
 nobj = length(options.obj);
@@ -116,19 +115,40 @@ nobj = length(options.obj);
 %measures in the problem:
 %start with no time breaks, one initial measure
 %one occupation measure per switched systems
-%one peak measure
-mpol('x_occ', nx, nsys);
 
-%mpol('xp', nx, 1);
-%Xp = subs(options.state_supp, options.var.x, xp);
+%one peak measure
 xp = options.var.x;
 Xp = options.state_supp;
+
 %deal with hanging variables and measures by letting the original x be the
 %peak measure
 
 %replace with time breaks
 mpol('x0', nx, 1);
 X0 = subs(options.state_init, options.var.x, x0);
+
+
+
+if nw > 0
+    %parameters
+    wp = options.var.w;    
+    mpol('w0', nw, 1);
+    
+    Wp = options.param;
+    W0 = subs(Wp, wp, w0);
+    
+    W = [Wp; W0; wp == w0];
+    mpol('w_occ', nw, nsys);
+else
+    W = [];    
+    w_occ = zeros(0, nsys);
+    wp = [];
+    w0 = [];
+end
+
+%occupation measure
+mpol('x_occ', nx, nsys);
+
 
 mu = cell(nsys, 1);
 v = cell(nsys, 1);
@@ -138,49 +158,81 @@ X_occ = []; %support
 
 %measure information
 if TIME_INDEP           
-    mup = meas(xp);
-    vp = mmon(xp, d);
+    mup = meas([xp; wp]);
+    tp = [];
+    vp = mmon([xp; wp], d);
     yp = mom(vp);
     
-    mu0 = meas(x0);
-    v0 = mmon(x0, d);
+    mu0 = meas([x0; w0]);
+    t0 = [];
+    v0 = mmon([x0; w0], d);
     y0 = mom(v0);
     
     %[mu, X, Ay] = occupation_measure(f, X, options.var, x_occ, d)
+    
     for i = 1:nsys
-        xcurr = x_occ(:, i);
+        %xcurr = x_occ(:, i);
+        var_new = struct('t', [], 'x', x_occ(:, i), 'w', w_occ(:, i));
         
         [mu{i}, X_occ_curr, Ay_curr] = occupation_measure(options.dynamics.f{i}, ...
-            options.dynamics.X{i}, options.var, xcurr, d);
+            options.dynamics.X{i}, options.var, var_new, d);
         
         X_occ = [X_occ; X_occ_curr];
         Ay = Ay + Ay_curr;
+        
+        if nw > 0
+            W_curr = subs(Wp, wp, w_occ(:, i));
+            W = [W; W_curr];
+        end
     end
 else
-    %not actually sure, maybe all switching occupation measures have the same titme
-    t_occ = mpol('tocc', [1, nsys]);
-    tp = mpol('tp', 1);
-    t0 = mpol('t0', 1);
+    %define time variables
+    t_occ = mpol('t_occ', [1, nsys]);        
     
-    mup = meas([tp; xp]);
-    mu0 = meas([t0; x0]);
+    %peak time
+    tp = mpol('tp', 1);
+    Xp = [Xp; tp*(options.Tmax - tp) >= 0];
+    mup = meas([tp; xp; wp]);
+    
+    %initial time
+    t0 = mpol('t0', 1);
+    X0 = [X0; t0 == 0];                
+    mu0 = meas([t0; x0; w0]);        
     
     for i = 1:nsys
+        var_new = struct('t', t_occ, 'x', x_occ(:, i), 'w', w_occ(:, i));
         xcurr = x_occ(:, i);
         mu{i} = meas([t_occ(i), xcurr]);
         v{i}  = mmon([t_occ(i), xcurr], d);
+        
+        [mu{i}, X_occ_curr, Ay_curr] = occupation_measure(options.dynamics.f{i}, ...
+            options.dynamics.X{i}, options.var, var_new, d);
+        
+        %support the valid time range
+        Tmin_curr = options.dynamics.Tmin(i);
+        Tmax_curr = options.dynamics.Tmax(i);
+        
+        t_cons = (t_occ(i) - Tmin_curr)*(Tmax_curr - t_occ(i));            
+        
+        X_occ = [X_occ; X_occ_curr; t_cons >= 0];
+        Ay = Ay + Ay_curr;
+        
+        if nw > 0
+            W_curr = subs(Wp, wp, w_occ(:, i));
+            W = [W; W_curr];
+        end
     end
     
 end
 
 %% Form Constraints and Solve Problem
 
-supp_con = [X0; Xp; X_occ];
+supp_con = [X0; Xp; X_occ; W];
 %careful of monic substitutions ruining dual variables
 mom_con = [mass(mu0) == 1; Ay + y0 == yp];
 
 if nobj == 1
-    cost = subs(options.obj, options.var.x, xp);
+    cost = subs(options.obj, [options.var.t; options.var.x], [tp; xp]);
 else
     %add a new measure for the cost
     %honestly I only want a free variable, so bounds on support are not
@@ -271,10 +323,6 @@ else
 end
 
 
-%Lp = diff(p, tc) + [diff(p, xc) diff(p, yc)]*fv(tc, [xc, yc]);
-%Lpval = matlabFunction(Lp);
-
-
 %% Output results to data structure
 %out = 1;
 
@@ -295,7 +343,7 @@ out.Lvval = Lpval;
 
 end
 
-function [mu, X_occ, Ay] = occupation_measure(f, X, var, x_occ, d)
+function [mu, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
 %form the occupation measure
 %Input:
 %   f:      Dynamics (function)
@@ -309,17 +357,35 @@ function [mu, X_occ, Ay] = occupation_measure(f, X, var, x_occ, d)
 %   X:      Support of measure
 %   Ay:     Adjoint of lie derivative, Liouville
 
-    var_all = [var.t; x_occ; var.w];
+    %var_all = [var.t; x_occ; var.w];
 
-    %f_occ = subs(f, var.x, x_occ);
-    f_occ = f(var_all);
+    x_occ = var_new.x;
     
-    mu = meas(var_all);
-    v = mmon(var_all, d);
+    if ~isempty(var_new.t)
+        t_occ = var_new.t;
+    else
+        t_occ = [];
+    end
+    
+    if ~isempty(var_new.w)
+        w_occ = var_new.w;
+    else
+        w_occ = [];
+    end
+    
+    var_prev = [var.t, var.x, var.w];
+    var_new = [t_occ, x_occ, w_occ];
+    
+    %f_occ = subs(f, var.x, x_occ);
+    f_occ = subs(f, var_prev, var_new);
+    %f_occ = f(var_all);
+    
+    mu = meas(var_new);
+    v = mmon(var_new, d);
 
     Ay = mom(diff(v, x_occ)*f_occ);
     if ~isempty(var.t)
-        Ay = Ay + mom(diff(v, var.t));
+        Ay = Ay + mom(diff(v, t_occ));
     end
     
     X_occ = subs(X, var.x, x_occ);
