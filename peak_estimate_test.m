@@ -47,7 +47,7 @@ p_opt.dynamics = dynamics;
 %p_opt.dynamics.f = f;
 %p_opt.dynamics.X = X;
 
-
+p_opt.Tmax = 10;
 p_opt.state_init = X0;
 p_opt.state_supp = X;
 %p_opt.state_fix.X = X0;
@@ -56,7 +56,14 @@ p_opt.state_supp = X;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 4;
+order = 3;
 out = peak_estimate(p_opt, order);
 
 %now do plots
+%out.func has all the ingredients
+%will require a for loop
+
+%Things to do:
+%write the sampler
+%write the plotting code
+%further testing

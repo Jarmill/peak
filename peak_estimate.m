@@ -91,10 +91,18 @@ if ~isfield(options.dynamics, 'Tmin') || isempty(options.dynamics.Tmin)
     options.dynamics.Tmax = ones(nsys, 1)*options.Tmax;
 end
 
-if isempty(options.var.t) || options.Tmax == Inf
+if options.Tmax == Inf
     TIME_INDEP = 1;   
-else
+else    
     TIME_INDEP = 0;    
+    
+    if isempty(options.var.t)
+        mpol('t', 1, 1)
+        tp = t;
+        options.var.t = tp;
+    else
+        tp = options.var.t;
+    end
 end
 
 
@@ -160,13 +168,13 @@ X_occ = []; %support
 if TIME_INDEP           
     mup = meas([xp; wp]);
     tp = [];
-    vp = mmon([xp; wp], d);
-    yp = mom(vp);
+    monp = mmon([xp; wp], d);
+    yp = mom(monp);
     
     mu0 = meas([x0; w0]);
     t0 = [];
-    v0 = mmon([x0; w0], d);
-    y0 = mom(v0);
+    mon0 = mmon([x0; w0], d);
+    y0 = mom(mon0);
     
     %[mu, X, Ay] = occupation_measure(f, X, options.var, x_occ, d)
     
@@ -187,23 +195,29 @@ if TIME_INDEP
     end
 else
     %define time variables
-    t_occ = mpol('t_occ', [1, nsys]);        
+    mpol('t_occ', 1, nsys);        
     
     %peak time
-    tp = mpol('tp', 1);
+    %mpol('tp', 1);
     Xp = [Xp; tp*(options.Tmax - tp) >= 0];
     mup = meas([tp; xp; wp]);
+    monp = mmon([tp; xp; wp], d);
+    yp = mom(monp);
     
     %initial time
-    t0 = mpol('t0', 1);
+    mpol('t0', 1);
+    %assign(t0, 0);
     X0 = [X0; t0 == 0];                
-    mu0 = meas([t0; x0; w0]);        
+    mu0 = meas([t0; x0; w0]); 
+    mon0 = mmon([t0; x0; w0], d);
+    y0 = mom(mon0);
+    
     
     for i = 1:nsys
         var_new = struct('t', t_occ, 'x', x_occ(:, i), 'w', w_occ(:, i));
         xcurr = x_occ(:, i);
-        mu{i} = meas([t_occ(i), xcurr]);
-        v{i}  = mmon([t_occ(i), xcurr], d);
+        mu{i} = meas([t_occ(i); xcurr]);
+        mon{i}  = mmon([t_occ(i); xcurr], d);
         
         [mu{i}, X_occ_curr, Ay_curr] = occupation_measure(options.dynamics.f{i}, ...
             options.dynamics.X{i}, options.var, var_new, d);
@@ -293,40 +307,53 @@ xp_rec = double(mom(xp));
 % end
 
 %set up dual variable
-syms xc [nx, 1]
+%syms xc [nx, 1]
 %scaling with t
+
+
+
 %vv = monolist([tc/T; xc; yc], d);
 %vv = conj(monolistYalToGlop([tc/T; xc; yc], d));
-if TIME_INDEP
-    vv = conj(monolistYalToGlop(xc, d));
-else
-    syms tc
-    vv = conj(monolistYalToGlop([tc; xc], d));    
-end
+% if TIME_INDEP
+%     vv = conj(monolistYalToGlop(xc, d));
+% else
+%     syms tc
+%     vv = conj(monolistYalToGlop([tc; xc], d));    
+% end
 
 %recovered dual variables from msdp, correspond to the free
 %variables in the sedumi problem
 
 %set up polynomials
-p = dual_rec'*vv;
-Lp = cell(nsys, 1);
+% p = dual_rec'*vv;
+% Lp = cell(nsys, 1);
+% for i = 1:nsys
+%     Lp{i} = jacobian(p, xc)*options.dynamics.f{i}(xc);
+% end
+% 
+% %turn into functions
+% pval = matlabFunction(p);
+% if nsys == 1
+%     Lpval = matlabFunction(Lp{1});
+% else
+%     Lpval = cellfun(@(Lpf) matlabFunction(Lpf), Lp, 'UniformOutput', false);
+% end
+v = dual_rec'*monp;
+Lv = [];
 for i = 1:nsys
-    Lp{i} = jacobian(p, xc)*options.dynamics.f{i}(xc);
+    Lv_curr = diff(v, xp)*options.dynamics.f{i};
+    if ~TIME_INDEP
+        Lv_curr = Lv_curr + diff(v, tp);
+    end
+    Lv = [Lv; Lv_curr];
 end
-
-%turn into functions
-pval = matlabFunction(p);
-if nsys == 1
-    Lpval = matlabFunction(Lp{1});
-else
-    Lpval = cellfun(@(Lpf) matlabFunction(Lpf), Lp, 'UniformOutput', false);
-end
-
 
 %% Output results to data structure
 %out = 1;
 
 out = struct;
+
+%recover optima
 out.peak_val = -obj_rec;
 out.optimal = (rank0 == 1) && (rankp == 1);
 out.x0 = x0_rec;
@@ -334,10 +361,36 @@ out.xp = xp_rec;
 out.M0 = M0_1;
 out.Mp = Mp_1;
 
-out.v = p;
-out.Lv = Lp;
-out.vval = pval;
-out.Lvval = Lpval;
+if ~TIME_INDEP
+    out.tp = double(mom(tp));
+end
+
+out.var = struct('t', tp, 'x', xp, 'w', wp);
+
+%functions and dual variables
+out.func = struct;
+out.func.dual_rec = dual_rec;
+out.func.v = v;
+out.func.Lv = Lv;
+
+%functions that should be nonnegative along valid trajectories
+out.func.cost = @(x) min(double(subs(options.obj, xp, x)));
+out.func.vval = @(x) double(subs(v, xp, x));    %dual v(t,x,w)
+out.func.Lvval = @(x) double(subs(Lv, xp, x));   %Lie derivative Lv(t,x,w)
+
+out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
+
+%evaluate system points
+out.func.fval = cell(nsys, 1);  %dynamics
+out.func.Xval = cell(nsys, 1);  %support set
+
+for i = 1:nsys
+    fval_curr = @(t, x, w) double(subs(out.dynamics.f{i}, [tp; xp; wp], [t; x; w]));
+    Xval_curr = @(x, w) min(double(subs(out.dynamics.f{i}, [tp; xp; wp], [t; x; w])));
+    
+    out.fval{i} = fval_curr;
+    out.Xval{i} = Xval_curr;
+end
 
 %% Done!
 
@@ -373,19 +426,19 @@ function [mu, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
         w_occ = [];
     end
     
-    var_prev = [var.t, var.x, var.w];
-    var_new = [t_occ, x_occ, w_occ];
+    vars_prev = [var.t; var.x; var.w];
+    vars_new = [t_occ; x_occ; w_occ];
     
     %f_occ = subs(f, var.x, x_occ);
-    f_occ = subs(f, var_prev, var_new);
+    f_occ = subs(f, vars_prev, vars_new);
     %f_occ = f(var_all);
     
-    mu = meas(var_new);
-    v = mmon(var_new, d);
+    mu = meas(vars_new);
+    mon = mmon(vars_new, d);
 
-    Ay = mom(diff(v, x_occ)*f_occ);
+    Ay = mom(diff(mon, x_occ)*f_occ);
     if ~isempty(var.t)
-        Ay = Ay + mom(diff(v, t_occ));
+        Ay = Ay + mom(diff(mon, t_occ));
     end
     
     X_occ = subs(X, var.x, x_occ);
