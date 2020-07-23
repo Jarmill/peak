@@ -374,9 +374,9 @@ out.func.v = v;
 out.func.Lv = Lv;
 
 %functions that should be nonnegative along valid trajectories
-out.func.cost = @(x) min(double(subs(options.obj, xp, x)));
-out.func.vval = @(x) double(subs(v, xp, x));    %dual v(t,x,w)
-out.func.Lvval = @(x) double(subs(Lv, xp, x));   %Lie derivative Lv(t,x,w)
+out.func.cost = @(x) min(eval(options.obj, xp, x));
+out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
+out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
 
 out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
 
@@ -385,11 +385,17 @@ out.func.fval = cell(nsys, 1);  %dynamics
 out.func.Xval = cell(nsys, 1);  %support set
 
 for i = 1:nsys
-    fval_curr = @(t, x, w) double(subs(out.dynamics.f{i}, [tp; xp; wp], [t; x; w]));
-    Xval_curr = @(x, w) min(double(subs(out.dynamics.f{i}, [tp; xp; wp], [t; x; w])));
     
-    out.fval{i} = fval_curr;
-    out.Xval{i} = Xval_curr;
+    if nw > 0
+        fval_curr = @(t,x,w) eval(options.dynamics.f{i}, [tp; xp; wp], [t; x; wp]);
+        Xval_curr = @(x,w) all(eval(options.dynamics.X{i}, [xp, w], [x,w]));
+    else       
+        fval_curr = @(t,x) eval(options.dynamics.f{i}, [tp; xp], [t; x]);
+        Xval_curr = @(x) all(eval(options.dynamics.X{i}, xp, x));
+    end
+    
+    out.func.fval{i} = fval_curr;
+    out.func.Xval{i} = Xval_curr;
 end
 
 %% Done!

@@ -67,3 +67,10 @@ out = peak_estimate(p_opt, order);
 %write the sampler
 %write the plotting code
 %further testing
+
+[ts, ys] = ode45(out.func.fval{1}, [0, 10], C0);
+Nts = length(ts);
+Xs = zeros(Nts, 1);
+for i = 1:Nts
+    Xs(i) = min(out.func.Xval{1}(ys(i, :)'));
+end
