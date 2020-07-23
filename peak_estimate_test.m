@@ -1,6 +1,6 @@
 %test out arguments of peak_estimate routine
 clear
-mset clear
+%mset clear
 
 
 %dynamics and support set
@@ -51,7 +51,7 @@ p_opt.state_supp = Xsupp;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 5;
+order = 3;
 out = peak_estimate(p_opt, order);
 
 %now do plots
@@ -62,6 +62,8 @@ out = peak_estimate(p_opt, order);
 %write the sampler
 %write the plotting code
 %further testing
+
+[out_sim] = switch_sim(out.dynamics, C0, 10, 1);
 
 % [ts, ys] = ode45(out.func.fval{1}, [0, 10], C0);
 % Nts = length(ts);

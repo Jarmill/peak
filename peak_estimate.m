@@ -395,20 +395,48 @@ out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func
 %evaluate system points
 out.func.fval = cell(nsys, 1);  %dynamics
 out.func.Xval = cell(nsys, 1);  %support set
+out.func.event = cell(nsys, 1); %Modification for ode45 event
 
 for i = 1:nsys
     
     if nw > 0
-        fval_curr = @(t,x,w) eval(options.dynamics.f{i}, [tp; xp; wp], [t; x; wp]);
+        %fval_curr = @(t,x,w) eval(options.dynamics.f{i}, [tp; xp; wp], [t; x; wp]);
+        
+        if TIME_INDEP
+            fval_curr = @(t,x, w) eval(options.dynamics.f{i}, [xp; wp], [x; w]);
+        else
+            fval_curr = @(t,x, w) eval(options.dynamics.f{i}, [tp; xp; wp], [t; x; w]);
+        end
+        
+        
         Xval_curr = @(x,w) all(eval(options.dynamics.X{i}, [xp, w], [x,w]));
+        
+        %space is inside support, time between Tmin and Tmax
+        %if event_curr=0 stop integration, and approach from either
+        %direction (only going to be in negative direction, given that
+        %event is a 0/1 indicator function
+        event_curr = @(t,x,w) deal(all([Xval_curr(x,w); ...
+            t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
     else       
-        fval_curr = @(t,x) eval(options.dynamics.f{i}, [tp; xp], [t; x]);
+        if TIME_INDEP
+            fval_curr = @(t,x) eval(options.dynamics.f{i}, xp, x);
+        else
+            fval_curr = @(t,x) eval(options.dynamics.f{i}, [tp; xp], [t; x]);
+        end
         Xval_curr = @(x) all(eval(options.dynamics.X{i}, xp, x));
+        event_curr = @(t,x) deal(all([Xval_curr(x); ...
+            t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
     end
     
     out.func.fval{i} = fval_curr;
-    out.func.Xval{i} = Xval_curr;
+    out.func.Xval{i} = Xval_curr;        
+    out.func.event{i} = event_curr;
 end
+
+out.dynamics = struct;
+out.dynamics.f = out.func.fval;
+out.dynamics.event = out.func.event;
+
 
 %% Done!
 
