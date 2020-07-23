@@ -76,13 +76,19 @@ end
 nw = length(options.var.w);
 nvar = nvar + nw;
 
+%compact support (artificial)
+XR = (sum(options.var.x.^2) <= options.R^2);
+
 %number of switching subsystems
 if iscell(options.dynamics.f)
     nsys = length(options.dynamics.f);
+    for i = 1:nsys
+        options.dynamics.X{i} = [options.dynamics.X{i}; XR];
+    end
 else
     nsys = 1;
     options.dynamics.f = {options.dynamics.f};
-    options.dynamics.X = {options.dynamics.X};    
+    options.dynamics.X = {[options.dynamics.X; XR]};    
 end
 
 %time range of states
@@ -92,7 +98,7 @@ if ~isfield(options.dynamics, 'Tmin') || isempty(options.dynamics.Tmin)
 end
 
 if options.Tmax == Inf
-    TIME_INDEP = 1;   
+    TIME_INDEP = 1;       
 else    
     TIME_INDEP = 0;    
     
@@ -103,6 +109,7 @@ else
     else
         tp = options.var.t;
     end
+    nvar = nvar + 1;
 end
 
 
@@ -126,14 +133,14 @@ nobj = length(options.obj);
 
 %one peak measure
 xp = options.var.x;
-Xp = options.state_supp;
+Xp = [options.state_supp; XR];
 
 %deal with hanging variables and measures by letting the original x be the
 %peak measure
 
 %replace with time breaks
 mpol('x0', nx, 1);
-X0 = subs(options.state_init, options.var.x, x0);
+X0 = subs([options.state_init; XR], options.var.x, x0);
 
 
 
@@ -146,7 +153,7 @@ if nw > 0
     W0 = subs(Wp, wp, w0);
     
     W = [Wp; W0; wp == w0];
-    mpol('w_occ', nw, nsys);
+    mpol('w_occ', nw, nsys);   
 else
     W = [];    
     w_occ = zeros(0, nsys);
@@ -156,6 +163,7 @@ end
 
 %occupation measure
 mpol('x_occ', nx, nsys);
+
 
 
 mu = cell(nsys, 1);
@@ -214,7 +222,7 @@ else
     
     
     for i = 1:nsys
-        var_new = struct('t', t_occ, 'x', x_occ(:, i), 'w', w_occ(:, i));
+        var_new = struct('t', t_occ(i), 'x', x_occ(:, i), 'w', w_occ(:, i));
         xcurr = x_occ(:, i);
         mu{i} = meas([t_occ(i); xcurr]);
         mon{i}  = mmon([t_occ(i); xcurr], d);
@@ -234,6 +242,7 @@ else
         if nw > 0
             W_curr = subs(Wp, wp, w_occ(:, i));
             W = [W; W_curr];
+            %is 'w_occ(:, i) == wp' enforced implicitly?
         end
     end
     
@@ -378,6 +387,9 @@ out.func.cost = @(x) min(eval(options.obj, xp, x));
 out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
 out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
 
+%TODO: missing the 'beta' weights for cost function in this representation
+%under multiple cost functions. Check that out later, proper dual
+%representation and verification of nonnegativity
 out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
 
 %evaluate system points

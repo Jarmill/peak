@@ -18,6 +18,8 @@ classdef peak_options < handle
         %or a cell of functions (minimum of entries)        
         obj = [];
         
+        
+        
         %% Variables and descriptors
         %variables (array of symbolic variables)
 %         t sym = [];     %time
@@ -25,25 +27,16 @@ classdef peak_options < handle
 %         w sym = [];     %uncertainty
         var = struct('t', [], 'x', [], 'w', []);
         
-        %support sets
-%         X sym = [];     %all states
-%         X0 sym = [];    %initial states
-%         XT sym = [];    %final states (implement time breaks later)
-%         W sym = [];     %admissable uncertainty
-        %supp = struct('X', [], 'X0', [], 'XT', [], 'W', []);        
-        
-        
+        %% support sets
+        %type @mpol/supcon
         %(X, T): Xt is the support of trajectories at time Tt
-        %W:      Plausible Uncertainties (default to 0)
-        %state_fix = struct('X', [], 'T', 0)
-        state_init = [];
-        state_supp = [];
-        param = [];        
+        state_init = []; %initial state at time 0
+        state_supp = []; %states to consider
+        R = 10; %sum(x.^2) <= R^2
+        param = [];  %parameters w  
         
         %% additional options
                 
-        %should the measures be time-independent?
-        %TIME_INDEP(1,1) logical = true; 
         
         %what is the tolerance for identifying a matrix as rank-1?
         rank_tol(1,1) double{mustBePositive} = 1e-3; 
