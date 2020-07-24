@@ -20,7 +20,21 @@ np = length(p);
 
 p_eval= zeros(np, npt);
 
-for j = 1:npt
-    p_eval(:, j) = double(subs(p, var, pt(:, j)));    
+%could probably vectorize this to make it more efficient
+for i = 1:np
+    curr_pow = p(i).pow;
+    curr_coef = p(i).coef;
+    curr_var = p(i).var;
+    if (length(curr_var) == 1) && (curr_var == 0)
+        %constant function
+        p_eval(i, :) = curr_coef;
+    else
+        for j = 1:npt
+        %p_eval(:, j) = double(subs(p, var, pt(:, j)));    
+            monom = pt(curr_var, j)'.^curr_pow;
+            monom_prod = prod(monom, 2);
+            p_eval(i, j) = curr_coef' * monom_prod;        
+        end
+    end
 end
 

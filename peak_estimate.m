@@ -252,7 +252,8 @@ end
 
 supp_con = [X0; Xp; X_occ; W];
 %careful of monic substitutions ruining dual variables
-mom_con = [mass(mu0) == 1; Ay + y0 == yp];
+Liou = Ay + (y0 - yp);
+mom_con = [mass(mu0) == 1; Liou == 0];
 
 if nobj == 1
     cost = subs(options.obj, [options.var.t; options.var.x], [tp; xp]);
@@ -376,23 +377,8 @@ end
 
 out.var = struct('t', tp, 'x', xp, 'w', wp);
 
-%functions and dual variables
-out.func = struct;
-out.func.dual_rec = dual_rec;
-out.func.v = v;
-out.func.Lv = Lv;
 
-%functions that should be nonnegative along valid trajectories
-out.func.cost = @(x) min(eval(options.obj, xp, x));
-out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
-out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
-
-%TODO: missing the 'beta' weights for cost function in this representation
-%under multiple cost functions. Check that out later, proper dual
-%representation and verification of nonnegativity
-out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
-
-%evaluate system points
+%Functions for evaluating system dynamics
 out.func.fval = cell(nsys, 1);  %dynamics
 out.func.Xval = cell(nsys, 1);  %support set
 out.func.event = cell(nsys, 1); %Modification for ode45 event
@@ -440,7 +426,35 @@ out.dynamics = struct;
 out.dynamics.f = out.func.fval;
 out.dynamics.event = out.func.event;
 
+out.dynamics.time_indep = TIME_INDEP;
 
+%% functions and dual variables
+out.func = struct;
+out.func.dual_rec = dual_rec;
+out.func.v = v;
+out.func.Lv = Lv;
+
+%functions that should be nonnegative along valid trajectories
+out.func.cost = @(x) min(eval(options.obj, xp, x));
+
+%TODO: missing the 'beta' weights for cost function in this representation
+%under multiple cost functions. Check that out later, proper dual
+%representation and verification of nonnegativity
+if TIME_INDEP
+    
+    out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
+    out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
+
+    out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
+else
+    out.func.vval = @(t, x) eval(v, [tp; xp], [t; x]);    %dual v(t,x,w)
+    out.func.Lvval = @(t, x) eval(Lv, [tp; xp], [t; x]);   %Lie derivative Lv(t,x,w)
+
+    out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x); -out.func.vval(t, x) - out.func.cost(x)];
+end
+
+
+out.dynamics.nonneg = out.func.nonneg;
 %% Done!
 
 end

@@ -34,22 +34,23 @@ sc_eval = zeros(length(sc), npt);
 
 
 for j = 1:npt
-    sc_subs = subs(sc, var, pt(:, j));
-    
+    %sc_subs = subs(sc, var, pt(:, j));
+    dl = eval(sc.left, var, pt(:, j));
+    dr = eval(sc.right, var, pt(:, j));
     for i = 1:length(sc)    
-        type = sc_subs(i).type;
+        type = sc(i).type;
 
-        dl = double(sc_subs(i).left);
-        dr = double(sc_subs(i).right);
+        %dl = double(sc_subs(i).left);
+        %dr = double(sc_subs(i).right);
         if strcmp(type, 'le')
-            sc_eval(i, j) = logical(dl <= dr);
-            ineq(i, j) = dr - dl;
+            sc_eval(i, j) = logical(dl(i) <= dr(i));
+            ineq(i, j) = dr(i) - dl(i);
         elseif strcmp(type, 'ge')
-            sc_eval(i, j) = logical(dl >= dr);
-            ineq(i, j) = dl - dr;
+            sc_eval(i, j) = logical(dl(i) >= dr(i));
+            ineq(i, j) = dl(i) - dr(i);
         else %equal
-            sc_eval(i, j) = logical(abs(dl-dr) <= tol);
-            eq(i, j) = dl - dr;
+            sc_eval(i, j) = logical(abs(dl(i)-dr(i)) <= tol);
+            eq(i, j) = dl(i) - dr(i);
         end
     end
 end

@@ -15,5 +15,5 @@ function [event_eval, terminal, direction] = support_event(t, x, supp_eval, Tmin
     %stop integrating when the system falls outside support
     %
     terminal = 1;
-    direction = 1;
+    direction = 0;
 end

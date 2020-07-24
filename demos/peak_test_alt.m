@@ -8,8 +8,8 @@
 
 %Author: Jared Miller 6/22/20
 SOLVE = 1;
-PLOT = 1;
-ISOSURFACE = 1;
+PLOT = 0;
+ISOSURFACE = 0;
 MD = 60; %mesh density of isosurface plot
 
 
@@ -87,7 +87,7 @@ if SOLVE
     mset(sdpsettings('solver', 'mosek'));
 
     %order = input('order of relaxation ='); d = 2*order;
-    order = 3; d = 2*order;
+    order = 5; d = 2*order;
     
         
     R = 5;    %radius to contain dynamics
@@ -97,10 +97,10 @@ if SOLVE
     
     if TIME_INDEP
         %measures are time-independent
-        mpol('x0', 2); mu0 = meas(x0); %initial measure
-        mpol('x', 2);  mu  = meas(x);   %occupation measure    
         mpol('xp', 2); mup = meas(xp); %peak measure
-
+        mpol('x0', 2); mu0 = meas(x0); %initial measure                    
+        mpol('x', 2);  mu  = meas(x);   %occupation measure
+        
         %test functions (monomials)
 
         v0 = mmon(x0, d);
@@ -163,14 +163,14 @@ if SOLVE
     %Liouville Equation
     Liou = Ay + (y0 - yp);
 
-    mom_con = [Liou == 0; mass(mu0)==1];
+    mom_con = [mass(mu0)==1; Liou == 0];
 
 
     %Support Constraints
     X  = (x'*x <= R^2);
     Xp = (xp'*xp <= R^2);
     X0 = ((x0(1)-C0(1))^2 + (x0(2)-C0(2))^2 <= R0^2);
-   
+    X0 = [X0, x0'*x0 <= R^2];
         
     supp_con = [X0, X, Xp, Tsupp];
     

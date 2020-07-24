@@ -124,5 +124,10 @@ out.break_sys = system_choice;
 out.break_time = time_breaks;
 out.break_index = time_index;
 
+%TODO: modify for evaluation on time varying system
+if isfield(dynamics, 'nonneg')    
+    out.nonneg = dynamics.nonneg(x_accum');
+end
+
 end
 
