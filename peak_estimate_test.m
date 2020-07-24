@@ -1,5 +1,5 @@
 %test out arguments of peak_estimate routine
-clear
+%clear
 %mset clear
 
 
@@ -16,10 +16,12 @@ Xsupp = [];
 %dynamics
 f1 = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 f2 = [-x(1); -x(2)];
+f3 = [-0.1*x(1)-x(2); x(1) - 0.1*x(2)];
 X1 = [];
 X2 = [];
-f = {f1, f2};
-X = {X1, X2};
+X3 = [];
+f = {f1, f2, f3};
+X = {X1, X2, X3};
 
 
 
@@ -51,7 +53,7 @@ p_opt.state_supp = Xsupp;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 3;
+order = 8;
 out = peak_estimate(p_opt, order);
 
 %now do plots

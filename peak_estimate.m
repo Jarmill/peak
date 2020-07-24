@@ -424,8 +424,11 @@ for i = 1:nsys
             fval_curr = @(t,x) eval(options.dynamics.f{i}, [tp; xp], [t; x]);
         end
         Xval_curr = @(x) all(eval(options.dynamics.X{i}, xp, x));
-        event_curr = @(t,x) deal(all([Xval_curr(x); ...
-            t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
+        
+        %event_curr = @(t,x) deal(all([Xval_curr(x); ...
+        %    t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
+        event_curr = @(t, x) support_event(t, x, Xval_curr, ...
+            options.dynamics.Tmin(i), options.dynamics.Tmax(i));
     end
     
     out.func.fval{i} = fval_curr;

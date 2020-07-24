@@ -1,4 +1,4 @@
-function [out] = switch_sim(dynamics, x0, Tmax, mu)
+function [out] = switch_sim(dynamics, x0, Tmax, mu, odefcn)
 %SWITCH_SIM Simulate a system that switches between different dynamics from
 %time 0 to Tmax. Switches are modeled by an exponential distribution with
 %mean mu. This assumes that all dynamics have the same valid region, will
@@ -13,8 +13,8 @@ function [out] = switch_sim(dynamics, x0, Tmax, mu)
 %   x0:         Initial condition
 %   Tmax:       Maximum time range of simulation
 %   mu:         Mean time for system switching
-%   supp:       A cell full of indicator functions defining supports of
-%               dynamics
+%   odefcn:     Function handle to the ode solver (default ode15s to deal
+%               with stiffness)
 %
 % Output:
 %   out:        Data structure with fields
@@ -27,6 +27,10 @@ function [out] = switch_sim(dynamics, x0, Tmax, mu)
 
 if nargin < 4
     mu = 1;
+end
+
+if nargin < 5
+    odefcn = @ode15s;
 end
 
 %gather information about the system
@@ -52,6 +56,7 @@ nx = length(x0);
 x0_curr = x0;
 time_accum = [];
 x_accum = [];
+time_index= [];
 
 
 time_total = 0;
@@ -61,7 +66,7 @@ time_breaks = 0;
 
 %options = odeset('Events',@events,'OutputFcn',@odeplot,'OutputSel',1,...
 %   'Refine',refine);
-
+k = 1;
 while time_total < Tmax
     
     %choose a possible system that is admissible for current time/state
@@ -78,18 +83,21 @@ while time_total < Tmax
     
     curr_sys = possible_sys(curr_sys_ind);
     curr_f = dynamics.f{curr_sys};
-    curr_event = @(t, x) dynamics.event{curr_sys}(t + time_total, x);
+    curr_event = @(t, x) dynamics.event{curr_sys}(t + time_total, x');
     
     %This system should be tracked for time time_track or if event is false
     time_track = exprnd(mu, 1, 1);
+    time_track_trunc = min(time_track, Tmax - time_total);
     
     %simulate the current system
     curr_ode_options = odeset('Events',curr_event);
     
-    [time_curr, x_curr] = ode45(curr_f, [0, time_track], x0_curr, curr_ode_options);
+    %[time_curr, x_curr] = ode15s(curr_f, [0, time_track_trunc], x0_curr, curr_ode_options);
+    %[time_curr, x_curr] = ode45(curr_f, [0, time_track_trunc], x0_curr, curr_ode_options);
+    [time_curr, x_curr] = odefcn(curr_f, [0, time_track_trunc], x0_curr, curr_ode_options);
     
     
-    time_taken = time_curr(end);
+    
     %[time_curr,  x_curr] = ode45(sys_curr, [0, time_range(i)], x0_curr);
     
     %save current trajectory
@@ -97,10 +105,14 @@ while time_total < Tmax
     x0_curr = x_curr(end, :);
     x_accum = [x_accum; x_curr];
     time_accum = [time_accum; time_curr + time_total];
+        
     time_total = time_total + time_curr(end);
     
     system_choice = [system_choice; curr_sys];
-    time_break = [time_break; time_total];
+    time_breaks = [time_breaks; time_total];
+    
+    time_index= [time_index; k*ones(length(time_curr), 1)];
+    k = k + 1;
 end
 
 %package up the output
@@ -109,7 +121,8 @@ out = struct;
 out.t = time_accum;
 out.x = x_accum;
 out.break_sys = system_choice;
-out.break_time = time_break;
+out.break_time = time_breaks;
+out.break_index = time_index;
 
 end
 
