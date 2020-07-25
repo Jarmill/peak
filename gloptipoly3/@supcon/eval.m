@@ -35,10 +35,15 @@ sc_eval = zeros(length(sc), npt);
 
 for j = 1:npt
     %sc_subs = subs(sc, var, pt(:, j));
-    dl = eval(sc.left, var, pt(:, j));
-    dr = eval(sc.right, var, pt(:, j));
+    dl = zeros(length(sc), 1);
+    dr = zeros(length(sc), 1);
+    
     for i = 1:length(sc)    
         type = sc(i).type;
+        
+        
+        dl(i) = eval(sc(i).left, var, pt(:, j));
+        dr(i)= eval(sc(i).right, var, pt(:, j));
 
         %dl = double(sc_subs(i).left);
         %dr = double(sc_subs(i).right);

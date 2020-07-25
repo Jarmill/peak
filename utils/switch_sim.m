@@ -78,7 +78,12 @@ while time_total < Tmax
             possible_sys = [possible_sys; i];
         end
     end
+    
     N_possible = length(possible_sys);
+    if N_possible == 0
+        break
+    end
+    
     curr_sys_ind = randi([1, N_possible], 1, 1);
     
     curr_sys = possible_sys(curr_sys_ind);
