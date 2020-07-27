@@ -50,11 +50,11 @@ for i = 1:np
     else
         
         %relabel variables
-        [curr_var_sort, var_perm_old] = sort(curr_var);    
+        [curr_var_sort, ~] = sort(curr_var);    
         
-        ind_curr_var = find(any(curr_var_sort == var_name_all, 2));
+        var_perm = find(any(curr_var_sort == var_name_all, 2));
     
-        var_perm = ind_curr_var;
+        %var_perm = ind_curr_var;
         
         for j = 1:npt
         %p_eval(:, j) = double(subs(p, var, pt(:, j))); 

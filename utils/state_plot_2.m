@@ -38,8 +38,8 @@ for i = 1:length(out_sim)
         xlabel('time')
         ylabel('x_1')
         zlabel('x_2')
-        if out.opttimal
-            title(['Peak Value for Trajectories = ', num2str(out.peak_val, 3), '(optimal),  order = ', num2str(out.order)])
+        if out.optimal
+            title(['Peak Value for Trajectories = ', num2str(out.peak_val, 3), ' (optimal),  order = ', num2str(out.order)])
         else
             title(['Peak Value for Trajectories = ', num2str(out.peak_val, 3), ', order = ', num2str(out.order)])
         end

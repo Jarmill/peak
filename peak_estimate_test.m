@@ -1,6 +1,6 @@
 %test out arguments of peak_estimate routine
-%clear
-%mset clear
+clear
+mset clear
 rng(300, 'twister')
 
 %dynamics and support set
@@ -80,7 +80,7 @@ p_opt.R = 6;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 4;
+order = 3;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
@@ -93,8 +93,8 @@ x0 = C0;
 
 mu = 1;
 
-Nsample = 100;
-%Nsample = 30;
+%Nsample = 100;
+Nsample = 30;
 sampler = @() circle_sample(1)'*R0 + C0;
 
 
