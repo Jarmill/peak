@@ -91,7 +91,12 @@ while time_total < Tmax
     curr_event = @(t, x) dynamics.event{curr_sys}(t + time_total, x');
     
     %This system should be tracked for time time_track or if event is false
-    time_track = exprnd(mu, 1, 1);
+    if nsys == 1
+        time_track = Tmax;
+    else
+        time_track = exprnd(mu, 1, 1);
+    end
+    
     time_track_trunc = min(time_track, Tmax - time_total);
     
     %simulate the current system
@@ -131,7 +136,11 @@ out.break_index = time_index;
 
 %TODO: modify for evaluation on time varying system
 if isfield(dynamics, 'nonneg')    
-    out.nonneg = dynamics.nonneg(x_accum');
+    if ~dynamics.time_indep
+        out.nonneg = dynamics.nonneg(time_accum', x_accum');
+    else
+        out.nonneg = dynamics.nonneg(x_accum');
+    end
 end
 
 end

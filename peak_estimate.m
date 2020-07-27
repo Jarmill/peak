@@ -436,7 +436,11 @@ out.func.v = v;
 out.func.Lv = Lv;
 
 %functions that should be nonnegative along valid trajectories
-out.func.cost = @(x) min(eval(options.obj, xp, x));
+if nobj > 1
+    out.func.cost = @(x) min(eval(options.obj, xp, x));
+else
+    out.func.cost = @(x) (eval(options.obj, xp, x));
+end
 
 %TODO: missing the 'beta' weights for cost function in this representation
 %under multiple cost functions. Check that out later, proper dual

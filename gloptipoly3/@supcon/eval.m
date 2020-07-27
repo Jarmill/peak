@@ -32,11 +32,22 @@ eq = zeros(neq, npt);
 
 sc_eval = zeros(length(sc), npt);
 
+if isa(pt, 'sym')
+    sc_eval = sym(sc_eval);
+    ineq = sym(ineq);
+    eq = sym(eq);
+end
 
 for j = 1:npt
     %sc_subs = subs(sc, var, pt(:, j));
+    
     dl = zeros(length(sc), 1);
     dr = zeros(length(sc), 1);
+    
+    if isa(pt, 'sym')
+        dl = sym(dl);
+        dr = sym(dr);
+    end
     
     for i = 1:length(sc)    
         type = sc(i).type;
@@ -48,13 +59,13 @@ for j = 1:npt
         %dl = double(sc_subs(i).left);
         %dr = double(sc_subs(i).right);
         if strcmp(type, 'le')
-            sc_eval(i, j) = logical(dl(i) <= dr(i));
+            sc_eval(i, j) = (dl(i) <= dr(i));
             ineq(i, j) = dr(i) - dl(i);
         elseif strcmp(type, 'ge')
-            sc_eval(i, j) = logical(dl(i) >= dr(i));
+            sc_eval(i, j) = (dl(i) >= dr(i));
             ineq(i, j) = dl(i) - dr(i);
         else %equal
-            sc_eval(i, j) = logical(abs(dl(i)-dr(i)) <= tol);
+            sc_eval(i, j) = (abs(dl(i)-dr(i)) <= tol);
             eq(i, j) = dl(i) - dr(i);
         end
     end
