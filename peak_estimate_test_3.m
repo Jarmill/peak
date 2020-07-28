@@ -62,11 +62,11 @@ p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
 
-Tmax_sim = 20;
+Tmax_sim = 15;
 %p_opt.Tmax = Tmax_sim;
 p_opt.state_init = X0;
 p_opt.state_supp = Xsupp;
-p_opt.R = 8;
+p_opt.R = 6;
 
 
 p_opt.rank_tol = 4e-3;
@@ -86,7 +86,7 @@ x0 = C0;
 mu = 1;
 
 %Nsample = 100;
-Nsample = 50;
+Nsample = 30;
 %sampler = @() circle_sample(1)'*R0 + C0;
 sampler = @() ball_sample(1, 3)'*R0 + C0;
 
