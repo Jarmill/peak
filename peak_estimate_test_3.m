@@ -97,8 +97,8 @@ out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, @ode45);
 if (out.optimal == 1) && (nsys == 1)
     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
     nplot = nonneg_plot(out_sim, out_sim_peak);
-    splot = state_plot_3(out, out_sim, out_sim_peak);
+    splot = state_plot(out, out_sim, out_sim_peak);
 else
     nplot = nonneg_plot(out_sim);
-    splot = state_plot_3(out, out_sim);
+    splot = state_plot(out, out_sim);
 end

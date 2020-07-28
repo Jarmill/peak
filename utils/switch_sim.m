@@ -1,4 +1,4 @@
-function [out] = switch_sim(dynamics, x0, Tmax, mu, odefcn)
+function [out_sim] = switch_sim(dynamics, x0, Tmax, mu, odefcn)
 %SWITCH_SIM Simulate a system that switches between different dynamics from
 %time 0 to Tmax. Switches are modeled by an exponential distribution with
 %mean mu. This assumes that all dynamics have the same valid region, will
@@ -17,7 +17,7 @@ function [out] = switch_sim(dynamics, x0, Tmax, mu, odefcn)
 %               with stiffness)
 %
 % Output:
-%   out:        Data structure with fields
+%   out_sim:    Data structure with fields
 %       t:          time
 %       x:          state
 %       break_sys:  active system in time break
@@ -127,19 +127,20 @@ end
 
 %package up the output
 %out = struct('t', times, 'x', x, 'break_sys', sys_id, 'break_time', time_break);
-out = struct;
-out.t = time_accum;
-out.x = x_accum;
-out.break_sys = system_choice;
-out.break_time = time_breaks;
-out.break_index = time_index;
+out_sim = struct;
+out_sim.t = time_accum;
+out_sim.x = x_accum;
+out_sim.break_sys = system_choice;
+out_sim.break_time = time_breaks;
+out_sim.break_index = time_index;
+out_sim.Tmax = Tmax;
 
 %TODO: modify for evaluation on time varying system
 if isfield(dynamics, 'nonneg')    
     if ~dynamics.time_indep
-        out.nonneg = dynamics.nonneg(time_accum', x_accum');
+        out_sim.nonneg = dynamics.nonneg(time_accum', x_accum');
     else
-        out.nonneg = dynamics.nonneg(x_accum');
+        out_sim.nonneg = dynamics.nonneg(x_accum');
     end
 end
 

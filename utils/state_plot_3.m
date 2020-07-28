@@ -81,7 +81,7 @@ fimplicit3(cy + 1e-8*sum(y), [xlim+box_margin, ylim + box_margin, zlim + box_mar
 
 view(62, 17)
 
-if nargin == 3
+if out.optimal
     %plot the peak functions too
     
     scatter3(out_sim_peak{i}.x(1, 1), out_sim_peak{i}.x(1, 2), out_sim_peak{i}.x(1, 3), 100, 'k', 'DisplayName', 'Initial Points');       

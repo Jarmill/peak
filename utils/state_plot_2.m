@@ -115,7 +115,7 @@ view(62, 17)
 
 
 
-if nargin == 3
+if out.optimal
     %plot the peak functions too
     subplot(1,3, 1)
         
