@@ -83,8 +83,13 @@ xp = options.var.x;
 %TODO: deal with parameters nx -> nx + nw;
 [box, box_center, box_half] = box_process(nx, options.box);
 
-XR_scale = (xp.^2) <= 1;
-XR_unscale = (xp - box_center).^2 <= box_half.^2;
+%XR_scale = (xp.^2) <= 1;
+%XR_unscale = (xp - box_center).^2 <= box_half.^2;
+
+XR_scale = [xp <= 1; xp >= -1];
+XR_unscale = [xp - box_center <= box_half; xp - box_center >= -box_half];
+
+
 if options.scale
     XR = XR_scale;
 else
@@ -369,14 +374,15 @@ end
 
 %how does this work with moment substitutions?
 %necessary with c^2 + s^2 = 1
+xp_inv_scale = (xp - box_center) .* (1./box_half);
 if options.scale
-    x0_rec = (x0_rec - box_center)./box_half;
-    xp_rec = (xp_rec - box_center)./box_half;
+    x0_rec = eval(xp_inv_scale, xp, x0_rec);
+    xp_rec = eval(xp_inv_scale, xp, xp_rec);
     if TIME_INDEP  
-        monp_unscale = subs(monp, xp, (xp - box_center).* (1./box_half));
+        monp_unscale = subs(monp, xp, xp_inv_scale);
     else
         tp_rec = tp_rec * options.Tmax;
-        monp_unscale = subs(monp, [tp; xp], [tp*options.Tmax; (xp - box_center)./box_half]);        
+        monp_unscale = subs(monp, [tp; xp], [tp*options.Tmax; xp_inv_scale]);        
     end
 else
     monp_unscale = monp;
