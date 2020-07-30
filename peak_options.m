@@ -5,30 +5,52 @@ classdef peak_options < handle
         
         %% properties of run
         %terminal time   
-        T(1,1) double{mustBePositive}  = 1;           
+        Tmax(1,1) double{mustBePositive}  = Inf;           
         
         %function dynamics
-        f function_handle = @(t,x,w) -x; 
+        %f: dynamics
+        %X: space on which dynamics are valid (arbitrary switching)
+        dynamics = struct('f', [], 'X', {}, 'Tmin', [], 'Tmax', [])
+        
         
         %objective to minimize
-        p function_handle = @(t, x) sum(x.^2);
+        %could be a function (single objective)
+        %or a cell of functions (minimum of entries)        
+        obj = [];
+        
+        
         
         %% Variables and descriptors
         %variables (array of symbolic variables)
-        t sym = [];     %time
-        x sym = [];     %state
-        w sym = [];     %uncertainty
+%         t sym = [];     %time
+%         x sym = [];     %state
+%         w sym = [];     %uncertainty
+        var = struct('t', [], 'x', [], 'w', []);
         
-        %support sets
-        X sym = [];     %all states
-        X0 sym = [];    %initial states
-        XT sym = [];    %final states
-        W sym = [];     %admissable uncertainty
+        %% support sets
+        %type @mpol/supcon
+        %(X, T): Xt is the support of trajectories at time Tt
+        state_init = []; %initial state at time 0
+        state_supp = []; %states to consider
+        %R = 10; %sum(x.^2) <= R^2
+        
+        %Coordinate ranges for variables for scaling
+        %state variables lie in a box (utils/box_process)
+        
+        %box is scalar B:           -B      <= x_i <= B
+        %box is [Bmin, Bmax]:       -Bmin   <= x_i <= Bmax
+        %box is [B_i]:              -Bi     <= x_i <= B_i
+        %box is [Bmin_i, Bmax_i]    -Bmin_i <= x_i <= Bmax_i
+        box = 1; 
+        
+        scale = 1; %should variables be scaled to [-1,1] (state) and [0,1] (time)
+        
+        
+        
+        param = [];  %parameters w  
         
         %% additional options
-        
-        %should the measures be time-independent?
-        TIME_INDEP(1,1) logical = true; 
+                
         
         %what is the tolerance for identifying a matrix as rank-1?
         rank_tol(1,1) double{mustBePositive} = 1e-3; 
