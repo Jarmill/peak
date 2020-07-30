@@ -88,7 +88,7 @@ cons = [cons, sos(L3v - gX*sxf3), sos(sxf3)];
 cons = [cons, sos(-p - v - gX*sxp), sos(sxp)];
 
 
-solvesos(cons, obj, opts, [cv; cx0; cxf1; cxf2; cxf3; cxp; gamma]);
+[sol, m, B, residual] = solvesos(cons, obj, opts, [cv; cx0; cxf1; cxf2; cxf3; cxp; gamma]);
 % 
 % solvesos(cons, obj, opts, [cv; cx0; ctf; cxf; ctp; cxp; gamma]);
 

@@ -4,6 +4,7 @@
 
 %options and degrees
 opts = sdpsettings('solver', 'mosek');
+opts.sos.model = 2;
 order = 4;
 d = 2*order;
 
@@ -13,7 +14,7 @@ x = sdpvar(2, 1);
 
 %define polynomial v and parameter gamma
 %[v, cv] = polynomial([t; x], d);
-[v, cv] = polynomial([x], d);
+[v, cv] = polynomial(x, d);
 gamma = sdpvar(1, 1);
 
 %constraint set
@@ -75,8 +76,24 @@ cons = [cons, sos(Lv - gX*sxf), sos(sxf)];
 cons = [cons, sos(-p - v - gX*sxp), sos(sxp)];
 
 
-solvesos(cons, obj, opts, [cv; cx0; cxf; cxp; gamma]);
-% 
-% solvesos(cons, obj, opts, [cv; cx0; ctf; cxf; ctp; cxp; gamma]);
+%[sol,monom,Q, res] = solvesos(cons, obj, opts, [cv; cx0; cxf; cxp; gamma]);
 
+
+[Fsos, objsos, msos] = sosmodel(cons, obj, opts, [gamma; cv; cx0; cxf; cxp]);
+%diagnostics = optimize(Fsos,objsos);
 value(gamma)
+
+
+modelM = export(Fsos, objsos, opts);
+modelS = export(Fsos, objsos, sdpsettings('solver', 'sedumi'));
+
+%[X, Y, INFO] = sedumi(modelS.A, modelS.b, modelS.C, modelS.K, modelS.pars);
+
+[r, res] = mosekopt('minimize', modelM.prob, modelM.param);
+[XX, YY] = convert_mosek2sedumi_var(res.sol.itr, modelM.prob.bardim);
+ZZ = modelS.C - modelS.A*YY;
+
+%sol = optimize(cons, obj, opts);
+% 
+%solvesos(cons, obj, opts, [cv; cx0; ctf; cxf; ctp; cxp; gamma]);
+
