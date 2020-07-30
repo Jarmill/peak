@@ -32,7 +32,21 @@ classdef peak_options < handle
         %(X, T): Xt is the support of trajectories at time Tt
         state_init = []; %initial state at time 0
         state_supp = []; %states to consider
-        R = 10; %sum(x.^2) <= R^2
+        %R = 10; %sum(x.^2) <= R^2
+        
+        %Coordinate ranges for variables for scaling
+        %state variables lie in a box (utils/box_process)
+        
+        %box is scalar B:           -B      <= x_i <= B
+        %box is [Bmin, Bmax]:       -Bmin   <= x_i <= Bmax
+        %box is [B_i]:              -Bi     <= x_i <= B_i
+        %box is [Bmin_i, Bmax_i]    -Bmin_i <= x_i <= Bmax_i
+        box = 1; 
+        
+        scale = 1; %should variables be scaled to [-1,1] (state) and [0,1] (time)
+        
+        
+        
         param = [];  %parameters w  
         
         %% additional options
