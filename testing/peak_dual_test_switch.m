@@ -4,7 +4,7 @@
 
 %options and degrees
 opts = sdpsettings('solver', 'mosek');
-order = 5;
+order = 3;
 d = 2*order;
 
 %variables in polynomials
@@ -32,8 +32,8 @@ f2 = [-x(1); -x(2)];
 f3 = [-0.1*x(1)-x(2); x(1) - 0.1*x(2)];
 
 L1v =  jacobian(v, x) * f1;
-L2v =  jacobian(v, x) * f1;
-L3v =  jacobian(v, x) * f1;
+L2v =  jacobian(v, x) * f2;
+L3v =  jacobian(v, x) * f3;
 
 % unsafe region level
 %Ru = 0.4;

@@ -6,7 +6,7 @@ function [out] = peak_estimate(options, order)
 %   Accomodates switching as well.
 %
 %Input: options structure (peak_options) with fields:
-%   var:        Structure of symbolic variables
+%   var:        Structure of symbolic variables (mpol)
 %       t:      time (default empty)
 %       x:      state
 %       w:      parametric uncertainty (default empty)
@@ -25,13 +25,8 @@ function [out] = peak_estimate(options, order)
 %       List:       Maximize the minimum of all objectives
 %                      Each entry is a polynomial       
 %   
-%   state_fix:  Supports of trajectories at specific time instances
-%       List:       Initial Support X0
-%       Struct:     Fields X and T. X: support of trajectories at times T
-%       (will need a better name. Generalizes X0)
-%               X is a cell of lists of polynomial. 
-%               T is an array ofdoubles             
-%
+%   state_supp: Support set of X
+%   state_init: Support set of X0 (initial)
 %   param:      Support of parametric uncertainty w (if var.w nonempty)
 %       
 %   rank_tol:   Rank tolerance for moment matrix to be rank-1
@@ -63,14 +58,6 @@ mset clearmeas
 %state variable
 nx = length(options.var.x);
 nvar = nx;
-
-%time variable
-if ~isempty(options.var.t)
-    nvar = nvar + 1;
-    %TIME_INDEP = 0;
-else
-    %TIME_INDEP = 1;
-end
 
 %parameter variables
 nw = length(options.var.w);
