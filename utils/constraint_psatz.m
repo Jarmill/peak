@@ -37,7 +37,7 @@ for i = 1:length(X.ineq)
     cons_mult = [cons_mult; sos(sineq)];
 end
 
-
-cons = [sos(p); cons_mult];
+%the bug was here, replace p with p_out
+cons = [sos(p_out); cons_mult];
 end
 

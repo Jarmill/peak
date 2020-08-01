@@ -323,7 +323,15 @@ else
     end       
 end
 
-objective = max(cost);
+
+
+if isempty(options.prev_cost)
+    objective = max(cost);
+else
+    objective = 0;
+    %should this be a support or a moment?
+    supp_con = [supp_con; cost >= 0.9999*options.prev_cost];
+end
 
 %% Solve program and extract results
 %set up problem

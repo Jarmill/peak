@@ -94,7 +94,8 @@ Xall.eq = [Xall.eq; W.eq];
 
 X0 = fill_constraint(options.state_init);
 
-X0.ineq = [X0.ineq; W.ineq; XR];
+%X0.ineq = [X0.ineq; W.ineq; XR];
+X0.ineq = [X0.ineq; W.ineq];
 X0.eq = [X0.eq; W.eq];
 %leave risky, make sure that X0 is compact
 
@@ -210,11 +211,24 @@ else
     coeff_list = [coeff_list; coeffc; beta];
 end
 
-objective = -gamma;
+%objective of the dual problem. Yes this is confusing
+if isempty(options.prev_cost)
+    objective = -gamma;
+else
+    %feasibility program based on https://yalmip.github.io/Strictly-feasible-sum-of-squares/
+    %but it doesn't work
+    objective = [];
+    cons = [cons; gamma >= options.prev_cost - 0.0001];
+end
 
 %% Solve program and extract results
 %set up problem
 opts = sdpsettings('solver', 'mosek');
+opts.sos.model = 2;
+
+%doesn't really help
+% opts.sos.numblk =  1e-6;
+
 
 [sol, monom, Gram, residual] = solvesos(cons, objective, opts, coeff_list);
 
@@ -231,9 +245,9 @@ v_rec = value(cv)' * monolist(vars, d);
 % v = dual_rec'*monp_unscale;
 Lv_rec = [];
 for i = 1:nsys
-    Lv_curr = diff(v, x)*options.dynamics.f{i};
+    Lv_curr = jacobian(v_rec, x)*options.dynamics.f{i};
     if ~TIME_INDEP
-        Lv_curr = Lv_curr + diff(v, tp);
+        Lv_curr = Lv_curr + jacobian(v_rec, t);
     end
     Lv_rec = [Lv_rec; Lv_curr];
 end
@@ -248,7 +262,10 @@ out.order = order;
 out.peak_val = peak_val;
 out.monom = monom;
 out.Gram = Gram;
+out.mineig = min(cellfun(@(q) min(eig(q)), Gram));
+out.feasible = out.mineig > 0;
 out.residual = residual;
+out.optimal = 0;
 
 if nobj == 1
     out.beta = 1;
@@ -257,39 +274,33 @@ else
 end
 
 
-%out.optimal = (rank0 == 1) && (rankp == 1);
-%out.x0 = x0_rec;
-%out.x = x_rec;
-%out.M0 = M0_1;
-%out.Mp = Mp_1;
-
-% if ~TIME_INDEP
-%     out.tp = tp_rec;
-% end
-
-
-
 out.var = struct('t', t, 'x', x, 'w', w);
 
 
-%Functions for evaluating system dynamics
-% out.func.fval = cell(nsys, 1);  %dynamics
-% out.func.Xval = cell(nsys, 1);  %support set
-% out.func.event = cell(nsys, 1); %Modification for ode45 event
+%Functions for simulating system dynamics
+
+out.func = struct;
+%polynomials
+out.func.v = v_rec;
+out.func.Lv = Lv_rec;
+
+out.func.fval = cell(nsys, 1);  %dynamics
+out.func.Xval = cell(nsys, 1);  %support set
+out.func.event = cell(nsys, 1); %Modification for ode45 event
 % 
-% for i = 1:nsys
-%     
-%     if nw > 0
-%         %fval_curr = @(t,x,w) eval(options.dynamics.f{i}, [tp; x; wp], [t; x; wp]);
+for i = 1:nsys
+    
+    if nw > 0
+        %fval_curr = @(t,x,w) replace(options.dynamics.f{i}, [tp; x; wp], [t; x; wp]);
+        
+        if TIME_INDEP
+            fval_curr = @(tt,xt, wt) replace(options.dynamics.f{i}, [x; w], [xt; wt]);
+        else
+            fval_curr = @(tt,xt, wt) replace(options.dynamics.f{i}, [t; x; w], [tt; xt; wt]);
+        end
+        
 %         
-%         if TIME_INDEP
-%             fval_curr = @(t,x, w) eval(options.dynamics.f{i}, [x; wp], [x; w]);
-%         else
-%             fval_curr = @(t,x, w) eval(options.dynamics.f{i}, [tp; x; wp], [t; x; w]);
-%         end
-%         
-%         
-%         Xval_curr = @(x,w) all(eval([options.dynamics.X{i}; XR_unscale], [x, w], [x,w]));
+        Xval_curr = @(xt,wt) all(replace([options.dynamics.X{i}; XR], [x, w], [xt,wt]));
 %         
 %         %space is inside support, time between Tmin and Tmax
 %         %if event_curr=0 stop integration, and approach from either
@@ -297,63 +308,80 @@ out.var = struct('t', t, 'x', x, 'w', w);
 %         %event is a 0/1 indicator function
 %         event_curr = @(t,x,w) deal(all([Xval_curr(x,w); ...
 %             t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
-%     else       
-%         if TIME_INDEP
-%             fval_curr = @(t,x) eval(options.dynamics.f{i}, x, x);
-%         else
-%             fval_curr = @(t,x) eval(options.dynamics.f{i}, [tp; x], [t; x]);
-%         end
-%         Xval_curr = @(x) all(eval([options.dynamics.X{i}; XR_unscale], x, x));
-%         
-%         %event_curr = @(t,x) deal(all([Xval_curr(x); ...
-%         %    t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
-%         event_curr = @(t, x) support_event(t, x, Xval_curr, ...
-%             options.dynamics.Tmin(i), options.dynamics.Tmax(i));
-%     end
+    else       
+        if TIME_INDEP
+            fval_curr = @(tt,xt) replace(options.dynamics.f{i}, x, xt);
+        else
+            fval_curr = @(tt,xt) replace(options.dynamics.f{i}, [t; x], [tt; xt]);
+        end
+        Xval_curr = @(xt) constraint_eval(X{i}, x, xt);
+        %Xval_curr = @(xt) all(replace([options.dynamics.X{i}; XR], x, xt));
+        %Xval_curr = @(xt) all([replace([options.dynamics.X{i}.ineq; XR], x, xt) >=0;...
+        %    abs(replace([options.dynamics.X{i}.eq], x, xt)) <=1e-8]);
+        
+        %event_curr = @(t,x) deal(all([Xval_curr(x); ...
+        %    t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
+        event_curr = @(tt, xt) support_event(tt, xt, Xval_curr, ...
+            options.dynamics.Tmin(i), options.dynamics.Tmax(i));
+    end
 %     
-%     out.func.fval{i} = fval_curr;
-%     out.func.Xval{i} = Xval_curr;        
-%     out.func.event{i} = event_curr;
-% end
+    out.func.fval{i} = fval_curr;
+    out.func.Xval{i} = Xval_curr;        
+    out.func.event{i} = event_curr;
+end
 % 
-% out.dynamics = struct;
-% out.dynamics.f = out.func.fval;
-% out.dynamics.event = out.func.event;
-% 
-% out.dynamics.time_indep = TIME_INDEP;
-% 
-% %% functions and dual variables
-out.func = struct;
-% out.func.dual_rec = dual_rec;
-out.func.v = v_rec;
-out.func.Lv = Lv_rec;
+
+out.dynamics = struct;
+out.dynamics.f = out.func.fval;
+out.dynamics.event = out.func.event;
+
+out.dynamics.time_indep = TIME_INDEP;
 
 
-% %functions that should be nonnegative along valid trajectories
+%functions that should be nonnegative along valid trajectories
 if nobj > 1
-    out.func.cost = @(x) min(eval(options.obj, x, x));
+    out.func.cost = @(xt) min(polyval_yalmip(options.obj, x, xt), 1);
 else
-    out.func.cost = @(x) (eval(options.obj, x, x));
+    out.func.cost = @(xt) (polyval_yalmip(options.obj, x, xt));
 end
  
 % %TODO: missing the 'beta' weights for cost function in this representation
 % %under multiple cost functions. Check that out later, proper dual
 % %representation and verification of nonnegativity
-% if TIME_INDEP
-%     
-%     out.func.vval = @(x) eval(v, x, x);    %dual v(t,x,w)
-%     out.func.Lvval = @(x) eval(Lv, x, x);   %Lie derivative Lv(t,x,w)
+if TIME_INDEP
+    
+%     out.func.vval = @(xt) replace(v_rec, x, xt);    %dual v(t,x,w)
+%     out.func.Lvval = @(xt) replace(Lv_rec, x, xt);   %Lie derivative Lv(t,x,w)
+
+    out.func.vval  = @(xt) polyval_yalmip(v_rec, x, xt);    %dual v(t,x,w)
+    out.func.Lvval = @(xt) polyval_yalmip(Lv_rec, x, xt);   %Lie derivative Lv(t,x,w)
+
+
+    %out.func.nonneg = @(xt) [out.func.vval(xt) - peak_val; out.func.Lvval(xt); -out.func.vval(xt) - out.func.cost(xt)];
+    out.func.nonneg = @(xt) [out.func.vval(xt) - peak_val, out.func.Lvval(xt), -out.func.vval(xt) - out.func.cost(xt)]';
+else
+    out.func.vval  = @(tt, xt) polyval_yalmip(v_rec, [t; x], [tt; xt]);    %dual v(t,x,w)
+    out.func.Lvval = @(tt, xt) polyval_yalmip(Lv_rec, [t; x], [tt; xt]);   %Lie derivative Lv(t,x,w)
+
+%     out.func.nonneg = @(tt, xt) [out.func.vval(tt, xt) - peak_val; out.func.Lvval(t, x); -out.func.vval(tt, xt) - out.func.cost(xt)];
+out.func.nonneg = @(tt, xt) [out.func.vval(tt, xt) - peak_val, out.func.Lvval(t, x), -out.func.vval(tt, xt) - out.func.cost(xt)]';
+end
 % 
-%     out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
-% else
-%     out.func.vval = @(t, x) eval(v, [tp; x], [t; x]);    %dual v(t,x,w)
-%     out.func.Lvval = @(t, x) eval(Lv, [tp; x], [t; x]);   %Lie derivative Lv(t,x,w)
 % 
-%     out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x); -out.func.vval(t, x) - out.func.cost(x)];
-% end
-% 
-% 
-% out.dynamics.nonneg = out.func.nonneg;
+out.dynamics.nonneg = out.func.nonneg;
 %% Done!
+
+end
+
+function pval = polyval_yalmip(poly, vars, pt)
+%evaluate an sdpvar polynomial 'poly' in vars 'vars' at points 'pt'
+
+npts = size(pt, 2);
+
+pval = zeros(npts, 1);
+for i = 1:npts
+    ptcurr = pt(:, i);
+    pval(i) = replace(poly, vars, ptcurr);
+end
 
 end

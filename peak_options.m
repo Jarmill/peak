@@ -18,7 +18,10 @@ classdef peak_options < handle
         %or a cell of functions (minimum of entries)        
         obj = [];
         
-        
+        %iterative cuts
+        %output of prior problem may be infeasible (some matrices not PSD)
+        %find a feasible point with a cost of approximately prev_cost
+        prev_cost = [];
         
         %% Variables and descriptors
         %variables (array of symbolic variables)
@@ -44,9 +47,7 @@ classdef peak_options < handle
         box = 1; 
         
         scale = 1; %should variables be scaled to [-1,1] (state) and [0,1] (time)
-        
-        
-        
+                        
         param = [];  %parameters w  
         
         %% additional options

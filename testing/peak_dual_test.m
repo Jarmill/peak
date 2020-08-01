@@ -47,6 +47,7 @@ gX = R^2 - x(1)^2 - x(2)^2;
 
 %Putinar Multipliers
 [sx0, cx0] = polynomial(x, d-2);
+
 [sxf, cxf] = polynomial(x, d-2);
 [sxp, cxp] = polynomial(x, d-2);
 
@@ -75,14 +76,14 @@ cons = [cons, sos(Lv - gX*sxf), sos(sxf)];
 cons = [cons, sos(-p - v - gX*sxp), sos(sxp)];
 
 
-%[sol,monom,Q, res] = solvesos(cons, obj, opts, [cv; cx0; cxf; cxp; gamma]);
+[sol,monom,Q, res] = solvesos(cons, obj, opts, [cv; cx0; cxf; cxp; gamma]);
 
 
-[Fsos, objsos, msos] = sosmodel(cons, obj, opts, [gamma; cv; cx0; cxf; cxp]);
-%diagnostics = optimize(Fsos,objsos);
-value(gamma)
-
-
+% [Fsos, objsos, msos] = sosmodel(cons, obj, opts, [gamma; cv; cx0; cxf; cxp]);
+% %diagnostics = optimize(Fsos,objsos);
+% value(gamma)
+% 
+% 
 % modelM = export(Fsos, objsos, opts);
 % modelS = export(Fsos, objsos, sdpsettings('solver', 'sedumi'));
 % 
@@ -92,7 +93,7 @@ value(gamma)
 % [XX, YY] = convert_mosek2sedumi_var(res.sol.itr, modelM.prob.bardim);
 % ZZ = modelS.C - modelS.A*YY;
 % 
-%sol = optimize(cons, obj, opts);
+% %sol = optimize(cons, obj, opts);
+% % 
+% %solvesos(cons, obj, opts, [cv; cx0; ctf; cxf; ctp; cxp; gamma]);
 % 
-%solvesos(cons, obj, opts, [cv; cx0; ctf; cxf; ctp; cxp; gamma]);
-
