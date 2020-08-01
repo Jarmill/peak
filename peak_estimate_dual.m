@@ -227,7 +227,7 @@ opts = sdpsettings('solver', 'mosek');
 opts.sos.model = 2;
 
 %doesn't really help
-% opts.sos.numblk =  1e-6;
+opts.sos.numblk =  1e-6;
 
 
 [sol, monom, Gram, residual] = solvesos(cons, objective, opts, coeff_list);
@@ -289,18 +289,26 @@ out.func.Xval = cell(nsys, 1);  %support set
 out.func.event = cell(nsys, 1); %Modification for ode45 event
 % 
 for i = 1:nsys
-    
+    %fix this next
+    f_curr = polyval_func(f{i}, vars);
+%     X_ineq = polyval_func(X{i}.ineq, vars0);
+%     X_eq = polyval_func(X{i}.eq, vars0);
+%     
+%     eq_tol = 1e-8;
+%     Xval = @(vart) all([X_ineq(vart) >= 0; abs(X_eq(vart)) <= eq_tol]);
+%     
+    X_curr = constraint_func(X{i},vars0);
     if nw > 0
         %fval_curr = @(t,x,w) replace(options.dynamics.f{i}, [tp; x; wp], [t; x; wp]);
         
         if TIME_INDEP
-            fval_curr = @(tt,xt, wt) replace(options.dynamics.f{i}, [x; w], [xt; wt]);
+            fval_curr = @(tt,xt, wt) f_curr([xt; wt]);
         else
-            fval_curr = @(tt,xt, wt) replace(options.dynamics.f{i}, [t; x; w], [tt; xt; wt]);
+            fval_curr = @(tt,xt, wt) fcurr([tt; xt; wt]);
         end
         
 %         
-        Xval_curr = @(xt,wt) all(replace([options.dynamics.X{i}; XR], [x, w], [xt,wt]));
+        Xval_curr = @(xt,wt) X_curr([xt;wt]);
 %         
 %         %space is inside support, time between Tmin and Tmax
 %         %if event_curr=0 stop integration, and approach from either
@@ -310,11 +318,12 @@ for i = 1:nsys
 %             t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
     else       
         if TIME_INDEP
-            fval_curr = @(tt,xt) replace(options.dynamics.f{i}, x, xt);
+            fval_curr = @(tt,xt) f_curr(xt);
         else
-            fval_curr = @(tt,xt) replace(options.dynamics.f{i}, [t; x], [tt; xt]);
+            fval_curr = @(tt,xt) f_curr([tt; xt]);
         end
-        Xval_curr = @(xt) constraint_eval(X{i}, x, xt);
+        
+        Xval_curr = X_curr;
         %Xval_curr = @(xt) all(replace([options.dynamics.X{i}; XR], x, xt));
         %Xval_curr = @(xt) all([replace([options.dynamics.X{i}.ineq; XR], x, xt) >=0;...
         %    abs(replace([options.dynamics.X{i}.eq], x, xt)) <=1e-8]);
@@ -339,33 +348,74 @@ out.dynamics.time_indep = TIME_INDEP;
 
 
 %functions that should be nonnegative along valid trajectories
+%i accidentally did functional programming
+cost_func = polyval_func(obj, x);
 if nobj > 1
-    out.func.cost = @(xt) min(polyval_yalmip(options.obj, x, xt), 1);
+    out.func.cost = @(xt) min(cost_func(xt), 1);
 else
-    out.func.cost = @(xt) (polyval_yalmip(options.obj, x, xt));
+    out.func.cost = cost_func;
 end
  
-% %TODO: missing the 'beta' weights for cost function in this representation
-% %under multiple cost functions. Check that out later, proper dual
-% %representation and verification of nonnegativity
+%TODO: missing the 'beta' weights for cost function in this representation
+%under multiple cost functions. Check that out later, proper dual
+%representation and verification of nonnegativity
+
+%
+%also parameters
+%
+vval = polyval_func(v_rec, vars);
+Lvval = polyval_func(Lv_rec, vars);
+
+v_nonneg = polyval_func(v_rec - peak_val, vars);
+cost_nonneg = polyval_func(-v_rec - sum(out.beta.*obj), vars);
+
 if TIME_INDEP
+    %out.func.vval  = @(tt, xt) vval(xt);
+    %out.func.Lvval = @(tt, xt) Lvval(xt);
+    out.func.vval = vval;
+    out.func.Lvval = Lvval;
     
-%     out.func.vval = @(xt) replace(v_rec, x, xt);    %dual v(t,x,w)
-%     out.func.Lvval = @(xt) replace(Lv_rec, x, xt);   %Lie derivative Lv(t,x,w)
-
-    out.func.vval  = @(xt) polyval_yalmip(v_rec, x, xt);    %dual v(t,x,w)
-    out.func.Lvval = @(xt) polyval_yalmip(Lv_rec, x, xt);   %Lie derivative Lv(t,x,w)
-
-
-    %out.func.nonneg = @(xt) [out.func.vval(xt) - peak_val; out.func.Lvval(xt); -out.func.vval(xt) - out.func.cost(xt)];
-    out.func.nonneg = @(xt) [out.func.vval(xt) - peak_val, out.func.Lvval(xt), -out.func.vval(xt) - out.func.cost(xt)]';
+%     curr_v_nonneg = @(tt, xt) v_nonneg(xt);
+%     curr_cost_nonneg = @(tt, xt) cost_nonneg(xt);
+    nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt); cost_nonneg(xt)];
+    %split data into cell, evaluate point at each cell, then recombine
+    %inefficient, but will do the job
+    out.func.nonneg = @(xt) cell2mat(cellfun(@(xp) nonneg_func(xp), num2cell(xt, 1), 'UniformOutput', false));
 else
-    out.func.vval  = @(tt, xt) polyval_yalmip(v_rec, [t; x], [tt; xt]);    %dual v(t,x,w)
-    out.func.Lvval = @(tt, xt) polyval_yalmip(Lv_rec, [t; x], [tt; xt]);   %Lie derivative Lv(t,x,w)
-
-%     out.func.nonneg = @(tt, xt) [out.func.vval(tt, xt) - peak_val; out.func.Lvval(t, x); -out.func.vval(tt, xt) - out.func.cost(xt)];
-out.func.nonneg = @(tt, xt) [out.func.vval(tt, xt) - peak_val, out.func.Lvval(t, x), -out.func.vval(tt, xt) - out.func.cost(xt)]';
+    out.func.vval  = @(tt, xt) vval([tt; xt]);
+    out.func.Lvval = @(tt, xt) Lvval([tt; xt]);
+    
+    curr_v_nonneg = @(tt, xt) v_nonneg([tt; xt]);
+    curr_cost_nonneg = @(tt, xt) cost_nonneg([tt; xt]);
+    
+%     out.func.nonneg = @(tt, xt) [curr_v_nonneg(tt, xt); out.func.Lvval(tt, xt); curr_cost_nonneg(tt, xt)];
+% nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt); cost_nonneg(xt)];
+    nonneg_func = @(tt, xt) [curr_v_nonneg(tt, xt); out.func.Lvval(tt, xt); curr_cost_nonneg(tt, xt)];
+    %split data into cell, evaluate point at each cell, then recombine
+    %inefficient, but will do the job
+    out.func.nonneg = @(tt, xt) cell2mat(cellfun(@(txp) nonneg_func(txp(1), txp(2:end)), num2cell([tt; xt], 1), 'UniformOutput', false));
 end
+
+
+
+% if TIME_INDEP
+%     
+% %     out.func.vval = @(xt) replace(v_rec, x, xt);    %dual v(t,x,w)
+% %     out.func.Lvval = @(xt) replace(Lv_rec, x, xt);   %Lie derivative Lv(t,x,w)
+% 
+%     out.func.vval  = @(xt) polyval_yalmip(v_rec, x, xt);    %dual v(t,x,w)
+%     out.func.Lvval = @(xt) polyval_yalmip(Lv_rec, x, xt);   %Lie derivative Lv(t,x,w)
+% 
+% 
+%     %out.func.nonneg = @(xt) [out.func.vval(xt) - peak_val; out.func.Lvval(xt); -out.func.vval(xt) - out.func.cost(xt)];
+%     out.func.nonneg = @(xt) [out.func.vval(xt) - peak_val, out.func.Lvval(xt), -out.func.vval(xt) - out.func.cost(xt)]';
+% else
+%     out.func.vval  = @(tt, xt) polyval_yalmip(v_rec, [t; x], [tt; xt]);    %dual v(t,x,w)
+%     out.func.Lvval = @(tt, xt) polyval_yalmip(Lv_rec, [t; x], [tt; xt]);   %Lie derivative Lv(t,x,w)
+% 
+% %     out.func.nonneg = @(tt, xt) [out.func.vval(tt, xt) - peak_val; out.func.Lvval(t, x); -out.func.vval(tt, xt) - out.func.cost(xt)];
+% out.func.nonneg = @(tt, xt) [out.func.vval(tt, xt) - peak_val, out.func.Lvval(t, x), -out.func.vval(tt, xt) - out.func.cost(xt)]';
+% end
 % 
 % 
 out.dynamics.nonneg = out.func.nonneg;
@@ -373,15 +423,17 @@ out.dynamics.nonneg = out.func.nonneg;
 
 end
 
-function pval = polyval_yalmip(poly, vars, pt)
-%evaluate an sdpvar polynomial 'poly' in vars 'vars' at points 'pt'
+% function pval = polyval_yalmip(poly, vars, pt)
+% %evaluate an sdpvar polynomial 'poly' in vars 'vars' at points 'pt'
+% 
+% npts = size(pt, 2);
+% 
+% pval = zeros(npts, 1);
+% for i = 1:npts
+%     ptcurr = pt(:, i);
+%     pval(i) = replace(poly, vars, ptcurr);
+% end
+% 
+% end
+% 
 
-npts = size(pt, 2);
-
-pval = zeros(npts, 1);
-for i = 1:npts
-    ptcurr = pt(:, i);
-    pval(i) = replace(poly, vars, ptcurr);
-end
-
-end

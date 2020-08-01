@@ -23,16 +23,26 @@ X2 = [];
 X3 = [];
 %X3 = [x(1) >= 0];
 
-f = {f1, f2, f3};
-X = {X1, X2, X3};
+% f = {f1, f2, f3};
+% X = {X1, X2, X3};
+f = {f1, f2};
+X = {X1, X2};
 
 % f = f1;
 % X = X1;
 
+f4 = [0 2; -1 -1]*x;
+f5 = [1 2; -3 -2]*x;
+f = {f4, f5};
+X = {[], []};
+
 %initial set
 
-R0 = 0.4;
-C0 = [1.5; 0];
+%R0 = 0.4;
+%C0 = [1.5; 0];%
+
+R0 = 0.5;
+C0 = [-1; -1];
 
 X0 = struct;
 %same trick, + instead of - in X0
@@ -80,12 +90,12 @@ x0 = C0;
 mu = 1;
 
 %Nsample = 100;
-% Nsample = 30;
-% sampler = @() circle_sample(1)'*R0 + C0;
+Nsample = 50;
+sampler = @() circle_sample(1)'*R0 + C0;
 % 
 % 
 % 
-% out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu);
+out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu);
 % 
 % if (out.optimal == 1)
 %     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
@@ -94,7 +104,7 @@ mu = 1;
 % %     splot = state_plot_2(out, out_sim, out_sim_peak);
 %         splot = state_plot_N(out, out_sim, out_sim_peak);
 % else
-%     nplot = nonneg_plot(out_sim);
-% %     splot = state_plot_2(out, out_sim);
-%     splot = state_plot_N(out, out_sim);
+nplot = nonneg_plot(out_sim);
+splot = state_plot_2(out, out_sim);
+% splot = state_plot_N(out, out_sim);
 % end

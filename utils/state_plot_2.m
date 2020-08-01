@@ -89,7 +89,7 @@ end
 syms y [2 1]
 syms t
 
-if ~isfield(out, 'tp')
+if out.dynamics.time_indep
     %time independent
     vy = out.func.vval(y) - out.peak_val;
     subplot(1,3,1)
