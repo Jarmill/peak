@@ -70,11 +70,12 @@ xp = options.var.x;
 %TODO: deal with parameters nx -> nx + nw;
 [box, box_center, box_half] = box_process(nx, options.box);
 
-%XR_scale = (xp.^2) <= 1;
-%XR_unscale = (xp - box_center).^2 <= box_half.^2;
+XR_scale = (xp.^2) <= 1;
+XR_unscale = (xp - box_center).^2 <= box_half.^2;
+Xsupp = options.state_supp;
 
-XR_scale = [xp <= 1; xp >= -1];
-XR_unscale = [xp - box_center <= box_half; xp - box_center >= -box_half];
+%XR_scale = [xp <= 1; xp >= -1];
+%XR_unscale = [xp - box_center <= box_half; xp - box_center >= -box_half];
 
 
 if options.scale
@@ -134,11 +135,11 @@ if options.scale
             f{i} = subs(f{i}, [tp; xp], [tp/options.Tmax; xp_scale]);
         end
         
-        X{i} = [subs(X{i}, xp, xp_scale); XR_scale];
+        X{i} = [subs([Xsupp; X{i}], xp, xp_scale); XR_scale];
     end
 else
     for i = 1:nsys
-        X{i} = [X{i}; XR_unscale];
+        X{i} = [Xsupp; X{i}; XR_unscale];
     end
 end
 
@@ -384,7 +385,13 @@ else
 end
 
 %no more scaling should be necessary from this point on
-v = dual_rec'*monp_unscale;
+
+%with equality constraints, dual_rec is bigger than just v
+%find the ordering of dual_rec, and which entries correspond to v
+%v = dual_rec'*monp_unscale;
+%dual_rec_v = dual_rec((end - length(monp)+1):end);
+dual_rec_v = dual_rec(1:length(monp));
+v = dual_rec_v'*monp_unscale;
 Lv = [];
 for i = 1:nsys
     Lv_curr = diff(v, xp)*options.dynamics.f{i};

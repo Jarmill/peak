@@ -11,7 +11,7 @@ function [sc_eval, ineq, eq] = eval(sc, var, pt, tol)
 % J. Miller, 22 July 2020
 
 if nargin < 4
-    tol = 1e-10;
+    tol = 1e-6;
 end
 
 npt = size(pt, 2);
