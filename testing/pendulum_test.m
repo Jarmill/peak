@@ -16,29 +16,36 @@ u = 0;
 
 %support space
 
-%Xsupp = [c^2 + s^2 == 1]; %easier problem (less space to be >= 0), but
+Xsupp = [c^2 + s^2 == 1]; %easier problem (less space to be >= 0), but
 %v(x) is inaccurate
 
 %Xsupp = [c^2 == 1 - s^2];
 
 
-Xsupp = []; %harder problem, but accurate v(x)
+% Xsupp = []; %harder problem, but accurate v(x)
 
 %dynamics
 f = [-s*w; c*w; -s - b*w + c*u];
-% X = [];
-X = (c^2 + s^2 == 1);
+X = [];
+% X = (c^2 + s^2 == 1);
 
 
 %th_max = pi/4;
 th_max = pi/2;
 % w_max = 0.0;
 w_max = 1;
+
+HALF_ANGLE = 1; %keep sin(theta) >= 0
+
 %X0 = [c <= cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
-% X0 = [c >= cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
-X0 = [c >= cos(th_max); s^2 <= sin(th_max)^2; c^2 + s^2 == 1; ...
-    w^2 <= w_max^2];
-% X0 = [c >= cos(th_max); s^2 <= sin(th_max)^2; w == 0];
+%X0 = [c >= cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
+if HALF_ANGLE
+    X0 = [c >= cos(th_max); s <= sin(th_max); s >= 0; w^2 <= w_max^2];
+else
+    X0 = [c >= cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
+end
+% X0 = [c >= cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2; c^2 + s^2 == 1];
+
 
 %maximum height of pendulum
 %objective = 1-c;
@@ -61,7 +68,7 @@ p_opt.scale = 0;
 p_opt.obj = objective;
 
 %run problem 
-order = 3;
+order = 4;
 out = peak_estimate(p_opt, order);
 pend_height = 1-out.peak_val; %min vs. max?
 
@@ -71,8 +78,11 @@ Tmax_sim = 10;
 Nsample = 50;
 %sampler = @() circle_sample(1)'*R0 + C0;
 %sampler = @() pend_sample(th_max, w_max);
-sampler = @() (2*rand(2, 1) - 1).*[th_max; w_max];
-
+if HALF_ANGLE
+    sampler = @() [rand(1, 1)*th_max; (2*rand(1, 1) - 1)*w_max];
+else
+    sampler = @() (2*rand(2, 1) - 1).*[th_max; w_max];
+end
 %out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, @ode45);
 %out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, @ode15s);
 
@@ -80,16 +90,17 @@ out_sim = pend_sampler(sampler, Nsample, Tmax_sim, out.dynamics.nonneg, b);
 
 
 % % 
-% if (out.optimal == 1)
-%     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
-% %     nplot = nonneg_plot(out_sim, out_sim_peak);
-% % 
-% %     splot = state_plot_2(out, out_sim, out_sim_peak);
-%     splot = state_plot_N(out, out_sim, out_sim_peak);
-% else
+if (out.optimal == 1)
+    x0_angle = [atan2(out.x0(2), out.x0(1)); out.x0(3)];
+    out_sim_peak = pend_sampler(x0_angle, 1, Tmax_sim, out.dynamics.nonneg, b);
+    nplot = nonneg_plot(out_sim, out_sim_peak);
+% 
+    splot = state_plot_3(out, out_sim, out_sim_peak);
+% %     splot = state_plot_N(out, out_sim, out_sim_peak);
+else
     nplot = nonneg_plot(out_sim);
-% %     splot = state_plot_2(out, out_sim);
+%     splot = state_plot_2(out, out_sim);
     splot3 = state_plot_3(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
-% end
+end
 % 

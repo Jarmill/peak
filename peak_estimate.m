@@ -135,11 +135,11 @@ if options.scale
             f{i} = subs(f{i}, [tp; xp], [tp/options.Tmax; xp_scale]);
         end
         
-        X{i} = [subs([Xsupp; X{i}], xp, xp_scale); XR_scale];
+        X{i} = [subs([X{i}; Xsupp], xp, xp_scale); XR_scale];
     end
 else
     for i = 1:nsys
-        X{i} = [Xsupp; X{i}; XR_unscale];
+       X{i} = [X{i}; Xsupp; XR_unscale];
     end
 end
 
@@ -155,9 +155,16 @@ nobj = length(options.obj);
 %one peak measure
 
 if options.scale
-    Xp = [subs(options.state_supp, xp, xp_scale); XR];
+    Xp = [subs(options.state_supp, xp, xp_scale); Xsupp; XR];
 else
-    Xp = [options.state_supp; XR];
+    
+    %this is where dual_rec breaks
+%     Xp = [Xsupp; XR];
+    %adding equality constraints here breaks the invariant function
+    %dual_rec'monomials. Since X0 and X_occ are constrained within Xsupp,
+    %this should not be a problem. If dynamics stay within Xsupp, then Xp
+    %should be supported in Xsupp at optimality.
+    Xp = [XR];
 end
 %deal with hanging variables and measures by letting the original x be the
 %peak measure
@@ -167,9 +174,9 @@ mpol('x0', nx, 1);
 if options.scale
     X0_scale = subs(options.state_init, xp, xp_scale);
     
-    X0 = subs([X0_scale; XR], xp, x0);
+    X0 = subs([X0_scale; Xsupp; XR], xp, x0);
 else
-    X0 = subs([options.state_init; XR], xp, x0);
+    X0 = subs([options.state_init; Xsupp; XR], xp, x0);
 end
 
 
@@ -287,7 +294,8 @@ end
 
 %% Form Constraints and Solve Problem
 
-supp_con = [X0; Xp; X_occ; W];
+%supp_con = [Xp; X0; X_occ; W];
+supp_con = [X_occ; Xp; X0; W];
 %careful of monic substitutions ruining dual variables
 Liou = Ay + (y0 - yp);
 mom_con = [mass(mu0) == 1; Liou == 0];

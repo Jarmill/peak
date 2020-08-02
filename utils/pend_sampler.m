@@ -39,7 +39,7 @@ if nargin < 6
 end
 
 if nargin < 6
-    odefcn = @ode15s;
+    odefcn = @ode45;
 end
 
 

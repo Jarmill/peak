@@ -84,7 +84,7 @@ view(62, 17)
 if out.optimal
     %plot the peak functions too
     
-    scatter3(out_sim_peak{i}.x(1, 1), out_sim_peak{i}.x(1, 2), out_sim_peak{i}.x(1, 3), 100, 'k', 'DisplayName', 'Initial Points');       
+    scatter3(out_sim_peak{1}.x(1, 1), out_sim_peak{1}.x(1, 2), out_sim_peak{1}.x(1, 3), 100, 'k', 'DisplayName', 'Initial Points');       
     
     %initial condition
     scatter3(out.x0(1), out.x0(2), out.x0(3), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
