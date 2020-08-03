@@ -381,8 +381,8 @@ if TIME_INDEP
     
 %     curr_v_nonneg = @(tt, xt) v_nonneg(xt);
 %     curr_cost_nonneg = @(tt, xt) cost_nonneg(xt);
-    nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt) .* cell2mat(cellfun(@(ex) ex(xt), ...
-        out.func.Xval, 'UniformOutput', false)); cost_nonneg(xt)];
+    nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt) .* cell2mat(cellfun(@(ex) ex(zeros(1, size(xt, 2)), xt), ...
+        out.func.event, 'UniformOutput', false)); cost_nonneg(xt)];
     %split data into cell, evaluate point at each cell, then recombine
     %inefficient, but will do the job
     out.func.nonneg = @(xt) cell2mat(cellfun(@(xp) nonneg_func(xp), num2cell(xt, 1), 'UniformOutput', false));
