@@ -74,7 +74,8 @@ pend_height = 1-out.peak_val; %min vs. max?
 
 
 
-Tmax_sim = 10;
+%Tmax_sim = 10;
+Tmax_sim = 20;
 Nsample = 50;
 %sampler = @() circle_sample(1)'*R0 + C0;
 %sampler = @() pend_sample(th_max, w_max);

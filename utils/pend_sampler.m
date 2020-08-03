@@ -35,10 +35,10 @@ if nargin < 5
 end
 
 if nargin < 6
-    u = @(x) [];
+    u = @(x) 0;
 end
 
-if nargin < 6
+if nargin < 7
     odefcn = @ode45;
 end
 

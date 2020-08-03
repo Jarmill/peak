@@ -227,7 +227,7 @@ opts = sdpsettings('solver', 'mosek');
 opts.sos.model = 2;
 
 %doesn't really help
-opts.sos.numblk =  1e-6;
+opts.sos.numblk =  1e-4;
 
 
 [sol, monom, Gram, residual] = solvesos(cons, objective, opts, coeff_list);
@@ -332,11 +332,15 @@ for i = 1:nsys
         %    t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
         event_curr = @(tt, xt) support_event(tt, xt, Xval_curr, ...
             options.dynamics.Tmin(i), options.dynamics.Tmax(i));
+        
+        event_curr_2 = @(tt, xt) cell2mat(cellfun(@(txp) event_curr(txp(1), txp(2:end)),...
+            num2cell([tt; xt], 1), 'UniformOutput', false));
     end
 %     
     out.func.fval{i} = fval_curr;
     out.func.Xval{i} = Xval_curr;        
-    out.func.event{i} = event_curr;
+    out.func.event{i} = event_curr_2;
+    
 end
 % 
 
@@ -377,12 +381,14 @@ if TIME_INDEP
     
 %     curr_v_nonneg = @(tt, xt) v_nonneg(xt);
 %     curr_cost_nonneg = @(tt, xt) cost_nonneg(xt);
-    nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt); cost_nonneg(xt)];
+    nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt) .* cell2mat(cellfun(@(ex) ex(xt), ...
+        out.func.Xval, 'UniformOutput', false)); cost_nonneg(xt)];
     %split data into cell, evaluate point at each cell, then recombine
     %inefficient, but will do the job
     out.func.nonneg = @(xt) cell2mat(cellfun(@(xp) nonneg_func(xp), num2cell(xt, 1), 'UniformOutput', false));
 else
     out.func.vval  = @(tt, xt) vval([tt; xt]);
+    %out.func.Lvval = @(tt, xt) Lvval([tt; xt]);
     out.func.Lvval = @(tt, xt) Lvval([tt; xt]);
     
     curr_v_nonneg = @(tt, xt) v_nonneg([tt; xt]);
@@ -390,7 +396,8 @@ else
     
 %     out.func.nonneg = @(tt, xt) [curr_v_nonneg(tt, xt); out.func.Lvval(tt, xt); curr_cost_nonneg(tt, xt)];
 % nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt); cost_nonneg(xt)];
-    nonneg_func = @(tt, xt) [curr_v_nonneg(tt, xt); out.func.Lvval(tt, xt); curr_cost_nonneg(tt, xt)];
+    nonneg_func = @(tt, xt) [curr_v_nonneg(tt, xt); out.func.Lvval(tt, xt).* ...
+        cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'UniformOutput', false)); curr_cost_nonneg(tt, xt)];
     %split data into cell, evaluate point at each cell, then recombine
     %inefficient, but will do the job
     out.func.nonneg = @(tt, xt) cell2mat(cellfun(@(txp) nonneg_func(txp(1), txp(2:end)), num2cell([tt; xt], 1), 'UniformOutput', false));

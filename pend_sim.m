@@ -33,9 +33,9 @@ if nargin < 5
 end
 
 %closed loop dynamics
-curr_f = @(t, x) unit_pend_dynamics(t, x, b);
+curr_f = @(t, x) unit_pend_dynamics(t, x, b, u);
 [time_accum, x_accum] = odefcn(curr_f, [0, Tmax], x0);
-   
+
 
 %package up the output
 %out = struct('t', times, 'x', x, 'break_sys', sys_id, 'break_time', time_break);

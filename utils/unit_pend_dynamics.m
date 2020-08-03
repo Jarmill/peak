@@ -16,7 +16,9 @@ if nargin < 4
     u = @(x) 0;
 end
 
-xdot = [x(2); -sin(x(1)) + cos(x(1)) * u(x) - b*x(2)];
+%the cosine is for cart-pole (?)
+% xdot = [x(2); -sin(x(1)) + cos(x(1)) * u(x) - b*x(2)];
+xdot = [x(2); -sin(x(1)) +  u(x) - b*x(2)];
 
 end
 
