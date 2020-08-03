@@ -62,7 +62,7 @@ end
 syms y [3 1]
 syms t
 
-MD = 60;
+MD = 110;
 
 if ~isfield(out, 'tp')
     %time independent

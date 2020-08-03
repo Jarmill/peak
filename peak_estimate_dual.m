@@ -227,7 +227,7 @@ opts = sdpsettings('solver', 'mosek');
 opts.sos.model = 2;
 
 %doesn't really help
-opts.sos.numblk =  1e-4;
+opts.sos.numblk =  1e-3;
 
 
 [sol, monom, Gram, residual] = solvesos(cons, objective, opts, coeff_list);

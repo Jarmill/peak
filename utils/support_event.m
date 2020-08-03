@@ -7,10 +7,16 @@ function [event_eval, terminal, direction] = support_event(t, x, supp_eval, Tmin
     %this assumes that t = 0...Tmax-Tmin as with ode45.
 
     time_supp =  (t + Tmin <= Tmax);
+    Npt = size(x, 2);
+    event_eval = zeros(1, Npt);
+    for i = 1:Npt
+        xcurr = x(:, i);
+        tcurr = t(:, i);
+        
+        state_supp = all(supp_eval(reshape(xcurr, [], 1)));
 
-    state_supp = all(supp_eval(reshape(x, [], 1)));
-
-    event_eval = time_supp && state_supp;
+        event_eval(i) = time_supp(i) && state_supp;
+    end
 
     %stop integrating when the system falls outside support
     %

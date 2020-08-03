@@ -19,13 +19,15 @@ objective = x(3)^2;        %maximum angular velocity
 Xsupp.eq = (c^2 + s^2 - 1);
 
 %% Formulate dynamics
-%no friction
+%friction
+b = 0.001;
+
 energy = 0.5*w^2 - c;
 energy_gap = energy - 1;
-f_wait = [-s*w; c*w; -s];
+f_wait = [-s*w; c*w; -s - b*w];
 
 %lqr realization
-A = [0 1; 1 0];
+A = [0 1; 1 -b];
 B = [0; -1];
 
 Q = diag([2, 1]);
@@ -65,38 +67,63 @@ X_swing.ineq = (energy_gap^2 -  epsilon^2);
 % X_swing_pos = energy_gap >= epsilon;
 % X_swing_neg = energy_gap <= -epsilon;
 X_wait.ineq  = [-energy_gap^2 + epsilon^2; quad_lqr - delta];
-X_lqr.ineq   = [-energy_gap^2 + epsilon^2; -quad_lqr + delta];
+X_lqr.ineq   = [-energy_gap^2 + epsilon^2; -(quad_lqr - delta)];
 % X_wait  = [energy_gap <= epsilon; energy_gap >= -epsilon; quad_lqr >= delta];
 % X_lqr   = [energy_gap <= epsilon; energy_gap >= -epsilon; quad_lqr <= delta];
 
 
 %wrap up the dynamics
-f = {f_swing, f_wait, f_lqr};
-X = {X_swing, X_wait, X_lqr};
+% f = {f_swing, f_wait, f_lqr};
+% X = {X_swing, X_wait, X_lqr};
+
+%f = {f_lqr};%
+%X = {[]};
+%X = {(epsilon^2 - energy_gap^2)};
+
+%this works. now to start changing the dynamics
+%f = {f_lqr, f_lqr, f_lqr};
+%X = {X_lqr, X_wait, X_swing};
+
+f = {f_lqr, f_swing, f_swing};
+
+%f = {f_lqr, f_wait, f_wait};
+X = {X_lqr, X_wait, X_swing};
+
 
 %initial state
 %theta starts at pi, and goes to pi +- th_max
 %th_max = pi;
-th_max = pi/12;
-w_max = 0;
 
-HALF_ANGLE = 0; %keep sin(theta) >= 0
+
+%entirely in LQR portion
+%th_max = pi/8;
+%w_max = 0;
+
+%th_max = pi/2;
+%w_max = 0;
+th_max = pi - 0.01;
+w_max = 1.5;
+
+HALF_ANGLE = 1; %keep sin(theta) >= 0
 
 %X0 = [c <= cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
 %X0 = [c >= cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
 if HALF_ANGLE
-    %X0 = [c <= -cos(th_max); s <= sin(th_max); s >= 0; w^2 <= w_max^2];
-    if abs(sin(th_max)) <= 1e-8
-        X0.ineq = [-cos(th_max) - c; -s; s; w_max^2 - w^2];
-        X0.eq = [c^2 + s^2 - 1];
+    if w_max == 0
+        X0.ineq = [-cos(th_max) - c; s];
+        X0.eq = [c^2 + s^2 - 1, w];
     else
-        X0.ineq = [-cos(th_max) - c; sin(th_max)-s; s; w_max^2 - w^2];
-        X0.eq = [c^2 + s^2 - 1];
+        X0.ineq = [-cos(th_max) - c; s; w_max^2 - w^2];
+        X0.eq = [c^2 + s^2 - 1];        
     end
 else
-    %X0 = [c <= -cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
-    X0.ineq = [-cos(th_max) - c; sin(th_max)^2-s^2; s; w_max^2 - w^2];
-    X0.eq = [c^2 + s^2 - 1];
+    if w_max == 0
+        X0.ineq = [-cos(th_max) - c];
+        X0.eq = [c^2 + s^2 - 1, w];
+    else
+        X0.ineq = [-cos(th_max) - c; w_max^2 - w^2];
+        X0.eq = [c^2 + s^2 - 1];
+    end    
 end
 
 %formulate problem
@@ -109,37 +136,41 @@ p_opt.dynamics.X = X;
 
 p_opt.state_init = X0;
 p_opt.state_supp = Xsupp;
-p_opt.box = [-1, 1; -1, 1; -4, 4];
-p_opt.scale = 0;
+options.R = 8;
+
+%p_opt.scale = 0;
 
 p_opt.obj = objective;
 
-order = 4;
+order = 5;
 out = peak_estimate_dual(p_opt, order);
 peak_val = out.peak_val;
 ang_max = sqrt(-peak_val);
 
 %% Simulate
-Nsample = 20;
+Nsample = 100;
 Tmax_sim = 20;
 
-sampler = @() [pi + (2*rand() - 1)* th_max; (2*rand()-1)*w_max];
+if HALF_ANGLE
+    sampler = @() [pi - rand()* th_max; (2*rand()-1)*w_max];
+else
+    sampler = @() [pi + (2*rand() - 1)* th_max; (2*rand()-1)*w_max];
+end
 out_sim = pend_sampler(sampler, Nsample, Tmax_sim, out.dynamics.nonneg, 0, u);
 
 if (out.optimal == 1)
     x0_angle = [atan2(out.x0(2), out.x0(1)); out.x0(3)];
     out_sim_peak = pend_sampler(x0_angle, 1, Tmax_sim, out.dynamics.nonneg, b);
-    splot = state_plot_N(out, out_sim, out_sim_peak);
     nplot = nonneg_plot(out_sim, out_sim_peak);
-% 
+    pplot = pend_plot_3(out_sim, out_sim_peak);
 %     splot = state_plot_3(out, out_sim, out_sim_peak);
-% %     
+% %     splot = state_plot_N(out, out_sim, out_sim_peak);
 else
-    splot = state_plot_N(out, out_sim);
     nplot = nonneg_plot(out_sim);
 %     splot = state_plot_2(out, out_sim);
 %     splot3 = state_plot_3(out, out_sim);
-    
+    %splot = state_plot_N(out, out_sim);
+    pplot = pend_plot_3(out_sim);
 end
 
 function u_out = u_hybrid(x, S, eps, delta, u_lqr, u_swing)
@@ -158,7 +189,8 @@ else
     if Sform <= delta
         u_out = u_lqr(x);
     else
-        u_out = 0;
+        %u_out = 0;
+        u_out = u_swing(x);
     end
 end
 

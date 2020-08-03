@@ -479,7 +479,7 @@ out.dynamics.f = out.func.fval;
 out.dynamics.event = out.func.event;
 
 out.dynamics.time_indep = TIME_INDEP;
-
+event_all = @(tt, xt) cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'UniformOutput', false));
 %% functions and dual variables
 out.func = struct;
 out.func.dual_rec = dual_rec;
@@ -501,12 +501,12 @@ if TIME_INDEP
     out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
     out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
 
-    out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
+    out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x).*event_all(0,x); -out.func.vval(x) - out.func.cost(x)];
 else
     out.func.vval = @(t, x) eval(v, [tp; xp], [t; x]);    %dual v(t,x,w)
     out.func.Lvval = @(t, x) eval(Lv, [tp; xp], [t; x]);   %Lie derivative Lv(t,x,w)
 
-    out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x); -out.func.vval(t, x) - out.func.cost(x)];
+    out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x).*event_all(t, x); -out.func.vval(t, x) - out.func.cost(x)];
 end
 
 

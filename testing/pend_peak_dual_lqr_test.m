@@ -38,6 +38,8 @@ u_lqr_poly = K*[-s; w];
 %lqr decision
 quad_lqr = [-s; w]'*S*[-s; w];
 
+
+f_wait = [-s*w; c*w; -s];
 f_lqr = f_wait + [0; 0; 1]*u_lqr_poly;
 
 
@@ -52,7 +54,10 @@ X = [];
 %initial state
 %theta starts at pi, and goes to pi +- th_max
 %th_max = pi;
-th_max = pi/12;
+%th_max = pi/4;
+%w_max = 1;
+
+th_max = pi/8;
 w_max = 0;
 
 HALF_ANGLE = 0; %keep sin(theta) >= 0
@@ -60,18 +65,21 @@ HALF_ANGLE = 0; %keep sin(theta) >= 0
 %X0 = [c <= cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
 %X0 = [c >= cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
 if HALF_ANGLE
-    %X0 = [c <= -cos(th_max); s <= sin(th_max); s >= 0; w^2 <= w_max^2];
-    if abs(sin(th_max)) <= 1e-8
-        X0.ineq = [-cos(th_max) - c; -s; s; w_max^2 - w^2];
-        X0.eq = [c^2 + s^2 - 1];
+    if w_max == 0
+        X0.ineq = [-cos(th_max) - c; s];
+        X0.eq = [c^2 + s^2 - 1, w];
     else
-        X0.ineq = [-cos(th_max) - c; sin(th_max)-s; s; w_max^2 - w^2];
-        X0.eq = [c^2 + s^2 - 1];
+        X0.ineq = [-cos(th_max) - c; s; w_max^2 - w^2];
+        X0.eq = [c^2 + s^2 - 1];        
     end
 else
-    %X0 = [c <= -cos(th_max); s^2 <= sin(th_max)^2; w^2 <= w_max^2];
-    X0.ineq = [-cos(th_max) - c; sin(th_max)^2-s^2; s; w_max^2 - w^2];
-    X0.eq = [c^2 + s^2 - 1];
+    if w_max == 0
+        X0.ineq = [-cos(th_max) - c];
+        X0.eq = [c^2 + s^2 - 1, w];
+    else
+        X0.ineq = [-cos(th_max) - c; w_max^2 - w^2];
+        X0.eq = [c^2 + s^2 - 1];
+    end    
 end
 
 %formulate problem
@@ -84,8 +92,8 @@ p_opt.dynamics.X = X;
 
 p_opt.state_init = X0;
 p_opt.state_supp = Xsupp;
-p_opt.box = [-1, 1; -1, 1; -4, 4];
-p_opt.scale = 0;
+p_opt.R = 5;
+%p_opt.Tmax = 10;
 
 p_opt.obj = objective;
 
@@ -96,9 +104,11 @@ ang_max = sqrt(-peak_val);
 
 %% Simulate
 Nsample = 20;
-Tmax_sim = 20;
+Tmax_sim = 10;
 
 sampler = @() [pi + (2*rand() - 1)* th_max; (2*rand()-1)*w_max];
+
+u = u_lqr;
 out_sim = pend_sampler(sampler, Nsample, Tmax_sim, out.dynamics.nonneg, 0, u);
 
 if (out.optimal == 1)
