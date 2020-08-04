@@ -142,7 +142,7 @@ options.R = 8;
 
 p_opt.obj = objective;
 
-order = 5;
+order = 6;
 out = peak_estimate_dual(p_opt, order);
 peak_val = out.peak_val;
 ang_max = sqrt(-peak_val);

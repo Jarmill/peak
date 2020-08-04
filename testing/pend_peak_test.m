@@ -18,8 +18,8 @@ objective = x(3)^2;        %maximum angular velocity
 
 
 %support
-Xsupp = (c^2 + s^2 == 1);
-
+%Xsupp = (c^2 + s^2 == 1);
+Xsupp = [c^2 + s^2 <= 1; c^2 + s^2 >= 1];
 %% Formulate dynamics
 %friction
 b = 0.001;
@@ -84,7 +84,7 @@ X_lqr   = [energy_gap^2 <= epsilon^2; quad_lqr <= delta];
 % f = {f_lqr, f_lqr, f_lqr};
 % X = {X_lqr, X_wait, X_swing};
 
-f = {f_lqr, f_swing, f_swing};
+f = {f_lqr, f_wait, f_swing};
 X = {X_lqr, X_wait, X_swing};
 
 % X_swing_1 = [X_swing; c >= 0];
@@ -139,15 +139,15 @@ p_opt.box = [-1, 1; -1, 1; -4, 4];
 p_opt.scale = 0;
 
 p_opt.obj = objective;
-p_opt.Tmax = 20;
-order = 5;
+%p_opt.Tmax = 20;
+order = 4;
 out = peak_estimate(p_opt, order);
 
 
  
 %% Simulate
 %Nsample = 20;
-Nsample = 120;
+Nsample = 100;
 Tmax_sim = 20;
 
 if HALF_ANGLE
