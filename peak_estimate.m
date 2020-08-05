@@ -345,7 +345,7 @@ end
 %% Solve program and extract results
 %set up problem
 mset('yalmip',true);
-mset(sdpsettings('solver', 'mosek'));
+mset(sdpsettings('solver', options.solver));
 
 P = msdp(objective, ...
     mom_con, supp_con);

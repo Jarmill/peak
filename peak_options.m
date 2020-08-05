@@ -51,7 +51,7 @@ classdef peak_options < handle
         param = [];  %parameters w  
         
         %% additional options
-                
+        solver = 'mosek';
         
         %what is the tolerance for identifying a matrix as rank-1?
         rank_tol(1,1) double{mustBePositive} = 1e-3; 

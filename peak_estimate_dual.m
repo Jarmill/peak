@@ -223,7 +223,8 @@ end
 
 %% Solve program and extract results
 %set up problem
-opts = sdpsettings('solver', 'mosek');
+%opts = sdpsettings('solver', 'mosek');
+opts = sdpsettings('solver', options.solver);
 opts.sos.model = 2;
 
 %doesn't really help
