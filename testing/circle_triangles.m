@@ -1,6 +1,6 @@
 %triagonal approximation to circle
 
-Nth = 15;
+Nth = 12;
 
 th = 2*pi/Nth * (0:(Nth-1));
 th_avg = pi/Nth + th;

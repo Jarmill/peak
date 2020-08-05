@@ -28,7 +28,7 @@ for i = 1:length(out_sim)
             if k == 1
                 title('Value Function')
                 plot(t_curr, nonneg_curr(k, :), 'c','DisplayName', 'Trajectories')
-                title('Safety Function along Trajectories')
+                title('Value Function along Trajectories')
                 xlabel('time')
                 ylabel('v(x,t) - \gamma')                
                 legend('location', 'east')

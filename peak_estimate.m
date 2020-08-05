@@ -123,7 +123,6 @@ end
 
 
 
-
 %now scale everything
 if options.scale
     xp_scale = box_half.*xp + box_center;
@@ -181,6 +180,11 @@ end
 
 
 
+%occupation measure
+mpol('x_occ', nx, nsys);
+
+
+
 if nw > 0
     %parameters
     wp = options.var.w;    
@@ -189,17 +193,17 @@ if nw > 0
     Wp = options.param;
     W0 = subs(Wp, wp, w0);
     
-    W = [Wp; W0; wp == w0];
-    mpol('w_occ', nw, nsys);   
+    %W = [Wp; W0; wp == w0];
+    W = [Wp; W0];
+    
+    mpol('w_occ', nw, nsys);
+    
 else
     W = [];    
     w_occ = zeros(0, nsys);
     wp = [];
     w0 = [];
 end
-
-%occupation measure
-mpol('x_occ', nx, nsys);
 
 
 
@@ -427,6 +431,10 @@ if ~TIME_INDEP
     out.tp = tp_rec;
 end
 
+if nw > 0
+    out.w = double(mom(wp));
+end
+
 out.var = struct('t', tp, 'x', xp, 'w', wp);
 
 
@@ -436,32 +444,32 @@ out.func.Xval = cell(nsys, 1);  %support set
 out.func.event = cell(nsys, 1); %Modification for ode45 event
 
 for i = 1:nsys
-    
+    Xval_curr = @(x) all(eval([options.dynamics.X{i}; XR_unscale], xp, x));
     if nw > 0
         %fval_curr = @(t,x,w) eval(options.dynamics.f{i}, [tp; xp; wp], [t; x; wp]);
         
         if TIME_INDEP
-            fval_curr = @(t,x, w) eval(options.dynamics.f{i}, [xp; wp], [x; w]);
+            fval_curr = @(t, x, w) eval(options.dynamics.f{i}, [xp; wp], [x; w]);
         else
             fval_curr = @(t,x, w) eval(options.dynamics.f{i}, [tp; xp; wp], [t; x; w]);
         end
         
         
-        Xval_curr = @(x,w) all(eval([options.dynamics.X{i}; XR_unscale], [xp, w], [x,w]));
+%         Xval_curr = @(x,w) all(eval([options.dynamics.X{i}; XR_unscale], [xp; w], [x; w]));
         
         %space is inside support, time between Tmin and Tmax
         %if event_curr=0 stop integration, and approach from either
         %direction (only going to be in negative direction, given that
         %event is a 0/1 indicator function
-        event_curr = @(t,x,w) deal(all([Xval_curr(x,w); ...
-            t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
+        event_curr = @(t,x,w) support_event(t, x, Xval_curr, ...
+            options.dynamics.Tmin(i), options.dynamics.Tmax(i)); %should w be present here?
     else       
         if TIME_INDEP
             fval_curr = @(t,x) eval(options.dynamics.f{i}, xp, x);
         else
             fval_curr = @(t,x) eval(options.dynamics.f{i}, [tp; xp], [t; x]);
         end
-        Xval_curr = @(x) all(eval([options.dynamics.X{i}; XR_unscale], xp, x));
+%         Xval_curr = @(x) all(eval([options.dynamics.X{i}; XR_unscale], xp, x));
         
         %event_curr = @(t,x) deal(all([Xval_curr(x); ...
         %    t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
@@ -496,19 +504,33 @@ end
 %TODO: missing the 'beta' weights for cost function in this representation
 %under multiple cost functions. Check that out later, proper dual
 %representation and verification of nonnegativity
-if TIME_INDEP
-    
-    out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
-    out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
 
-    out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x) - out.func.cost(x)];
+if nw > 0
+    if TIME_INDEP    
+        out.func.vval = @(x, w) eval(v, [xp; wp], [x; w*ones(1, size(x, 2))]);    %dual v(t,x,w)
+        out.func.Lvval = @(x, w) eval(Lv, [xp; wp], [x; w*ones(1, size(x, 2))]);  %Lie derivative Lv(t,x,w)
+
+        out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x, w) - out.func.cost(x)];
+    else
+        out.func.vval = @(t, x, w) eval(v, [tp; xp; wp], [t; x; w*ones(1, size(x, 2))]);   %dual v(t,x,w)
+        out.func.Lvval = @(t, x, w) eval(Lv, [tp; xp; wp],  [t; x; w*ones(1, size(x, 2))]);   %Lie derivative Lv(t,x,w)
+
+        out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w).*event_all(t, x); -out.func.vval(t, x, w) - out.func.cost(x)];
+    end
+
 else
-    out.func.vval = @(t, x) eval(v, [tp; xp], [t; x]);    %dual v(t,x,w)
-    out.func.Lvval = @(t, x) eval(Lv, [tp; xp], [t; x]);   %Lie derivative Lv(t,x,w)
+    if TIME_INDEP    
+        out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
+        out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
 
-    out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x).*event_all(t, x); -out.func.vval(t, x) - out.func.cost(x)];
+        out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x) - out.func.cost(x)];
+    else
+        out.func.vval = @(t, x) eval(v, [tp; xp], [t; x]);    %dual v(t,x,w)
+        out.func.Lvval = @(t, x) eval(Lv, [tp; xp], [t; x]);   %Lie derivative Lv(t,x,w)
+
+        out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x).*event_all(t, x); -out.func.vval(t, x) - out.func.cost(x)];
+    end
 end
-
 
 out.dynamics.nonneg = out.func.nonneg;
 %% Done!
@@ -552,8 +574,8 @@ function [mu, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
     f_occ = subs(f, vars_prev, vars_new);
     %f_occ = f(var_all);
     
-    mu = meas(vars_new);
-    mon = mmon(vars_new, d);
+    mu = meas([x_occ; w_occ]);
+    mon = mmon([x_occ; w_occ], d);
 
     Ay = mom(diff(mon, x_occ)*f_occ);
     if ~isempty(var.t)

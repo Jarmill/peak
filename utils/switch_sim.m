@@ -1,4 +1,4 @@
-function [out_sim] = switch_sim(dynamics, x0, Tmax, mu, odefcn)
+function [out_sim] = switch_sim(dynamics, x0, Tmax, mu, nw, odefcn)
 %SWITCH_SIM Simulate a system that switches between different dynamics from
 %time 0 to Tmax. Switches are modeled by an exponential distribution with
 %mean mu. This assumes that all dynamics have the same valid region, will
@@ -30,6 +30,10 @@ if nargin < 4
 end
 
 if nargin < 5
+    nw = 0;
+end
+
+if nargin < 6
     odefcn = @ode15s;
 end
 
@@ -45,7 +49,7 @@ else
 end
 
 %support in space and time
-nx = length(x0);
+nx = length(x0) - nw;
 
 %nominal time breaks, ignoring dynamics.X{i}
 %[sys_id, time_break] = switch_breaks(Nsys, Tmax, mu);
@@ -53,12 +57,14 @@ nx = length(x0);
 %Nbreak = length(sys_id);
 
 %main solving loop
-x0_curr = x0;
+x0_curr = x0(1:nx);
 time_accum = [];
 x_accum = [];
 time_index= [];
 
-
+if nw > 0
+    w0 = x0(nx+1 : end);
+end
 time_total = 0;
 
 system_choice = [];
@@ -72,8 +78,12 @@ while time_total < Tmax
     %choose a possible system that is admissible for current time/state
     %possible_sys = find(cellfun(@(e) e(time_total, x0_curr), dynamics.event));
     possible_sys = [];
-    for i = 1:nsys
-        [event_value, ~, ~] = dynamics.event{i}(time_total, x0_curr);
+    for i = 1:nsys        
+        if nw > 0
+            [event_value, ~, ~] = dynamics.event{i}(time_total, x0_curr, w0);
+        else
+            [event_value, ~, ~] = dynamics.event{i}(time_total, x0_curr);
+        end
         if event_value == 1
             possible_sys = [possible_sys; i];
         end
@@ -87,8 +97,15 @@ while time_total < Tmax
     curr_sys_ind = randi([1, N_possible], 1, 1);
     
     curr_sys = possible_sys(curr_sys_ind);
-    curr_f = dynamics.f{curr_sys};
-    curr_event = @(t, x) dynamics.event{curr_sys}(t + time_total, x');
+    if nw > 0
+        %includes uncertain fixed parameters
+        curr_f = @(t, x) dynamics.f{curr_sys}(t, x, w0);
+        curr_event = @(t, x) dynamics.event{curr_sys}(t + time_total, x, w0);
+    else
+        %no uncertain fixed parameters
+        curr_f = dynamics.f{curr_sys};
+        curr_event = @(t, x) dynamics.event{curr_sys}(t + time_total, x);
+    end
     
     %This system should be tracked for time time_track or if event is false
     if nsys == 1
@@ -112,7 +129,7 @@ while time_total < Tmax
     
     %save current trajectory
     %check indices/dimensions
-    x0_curr = x_curr(end, :);
+    x0_curr = x_curr(end, :)';
     x_accum = [x_accum; x_curr];
     time_accum = [time_accum; time_curr + time_total];
         
@@ -128,19 +145,36 @@ end
 %package up the output
 %out = struct('t', times, 'x', x, 'break_sys', sys_id, 'break_time', time_break);
 out_sim = struct;
+
+%trajectories
 out_sim.t = time_accum;
 out_sim.x = x_accum;
+if nw > 0
+    out_sim.w = w0;
+else
+    out_sim.w = [];
+end
+
+%switching and statistics
 out_sim.break_sys = system_choice;
 out_sim.break_time = time_breaks;
 out_sim.break_index = time_index;
 out_sim.Tmax = Tmax;
 
-%TODO: modify for evaluation on time varying system
+%Evaluate (hopefully) nonnegative functions along trajectories
 if isfield(dynamics, 'nonneg')    
-    if ~dynamics.time_indep
-        out_sim.nonneg = dynamics.nonneg(time_accum', x_accum');
+    if nw > 0
+        if ~dynamics.time_indep
+            out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0);
+        else
+            out_sim.nonneg = dynamics.nonneg(x_accum', w0);
+        end
     else
-        out_sim.nonneg = dynamics.nonneg(x_accum');
+        if ~dynamics.time_indep
+            out_sim.nonneg = dynamics.nonneg(time_accum', x_accum');
+        else
+            out_sim.nonneg = dynamics.nonneg(x_accum');
+        end
     end
 end
 

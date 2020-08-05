@@ -9,7 +9,7 @@ function [fig] = state_plot_2(out, out_sim, out_sim_peak)
 Tmax = out_sim{1}.t(end);
 nx = size(out_sim{1}.x, 2);
 
-box_margin = 0.4*[-1, 1];
+box_margin = 2;
 
 assert(nx==2);
 
@@ -89,26 +89,28 @@ end
 syms y [2 1]
 syms t
 
-if out.dynamics.time_indep
+subplot(1,3,1)
+if out.dynamics.time_indep && isempty(out.var.w)
     %time independent
     vy = out.func.vval(y) - out.peak_val;
-    subplot(1,3,1)
-    fimplicit(vy, [xlim+box_margin, ylim + box_margin], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
+    
+    fimplicit(vy, [box_margin*xlim, box_margin*ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
     vyt = 1e-8*t + vy ;
 else
     vyt = out.func.vval(t, y) - out.peak_val;
 end    
 cy = out.func.cost(y) + out.peak_val;
 cyt = 1e-8*(t + sum(y)) + cy;
-fimplicit(cy + 1e-8*sum(y), [xlim+box_margin, ylim + box_margin],  '--r', 'DisplayName', 'Cost Bound', 'LineWidth', 2)
+fimplicit(cy + 1e-8*sum(y), [box_margin*xlim, box_margin*ylim],  '--r', 'DisplayName', 'Cost Bound', 'LineWidth', 2)
 
 subplot(1,3,[2,3])
 xlim([0, Tmax])
-fimplicit3(vyt, [xlim, ylim+box_margin, zlim + box_margin], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
-            'DisplayName', 'Invariant Set')
+if isempty(out.var.w)
+    fimplicit3(vyt, [xlim, box_margin*ylim, box_margin*zlim], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
+                'DisplayName', 'Invariant Set')
+end
 
-
-fimplicit3(cyt, [xlim, ylim+box_margin, zlim + box_margin], 'EdgeColor', 'None','FaceColor', 'r', 'FaceAlpha', 0.3, ...
+fimplicit3(cyt, [xlim, box_margin*ylim, box_margin*zlim], 'EdgeColor', 'None','FaceColor', 'r', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Cost Bound')
 
 view(62, 17)

@@ -1,8 +1,10 @@
-function [out_sim] = switch_sampler(dynamics, sampler, Ns, Tmax, mu, odefcn)
+function [out_sim] = switch_sampler(dynamics, sampler, Ns, Tmax, mu, Nw, odefcn)
 %SWITCH_SIM Simulate a system that switches between different dynamics from
 %time 0 to Tmax. Switches are modeled by an exponential distribution with
 %mean mu. This assumes that all dynamics have the same valid region, will
 %need to work on the closed cover further later.
+%
+% Turn this into an options datastructure
 %
 % Input:
 %   dynamics:   A struct with fields:
@@ -14,6 +16,7 @@ function [out_sim] = switch_sampler(dynamics, sampler, Ns, Tmax, mu, odefcn)
 %               X0 (inital point)
 %   Ns:         Number of sampled points to run
 %   x0:         Initial condition
+%   Nw:         Number of parameters (x0 -> [x0, w0]
 %   Tmax:       Maximum time range of simulation
 %   mu:         Mean time for system switching
 %   odefcn:     Function handle to the ode solver (default ode15s to deal
@@ -35,6 +38,10 @@ if nargin < 5
 end
 
 if nargin < 6
+    Nw = 0;
+end
+
+if nargin < 7
     odefcn = @ode15s;
 end
 
@@ -57,7 +64,7 @@ for i = 1:Ns
         end
     end
 
-    out_sim{i} = switch_sim(dynamics, x0, Tmax, mu, odefcn);
+    out_sim{i} = switch_sim(dynamics, x0, Tmax, mu, Nw, odefcn);
 end
 
 end
