@@ -3,7 +3,7 @@
 
 %find maximum angular velocity with hybrid controller
 mset clear
-rng(300, 'twister')
+
 
 %states/variables
 mpol('x', 2, 1);

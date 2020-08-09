@@ -89,14 +89,14 @@ f = options.dynamics.f;
 X = options.dynamics.X;
 
 Xall = fill_constraint(options.state_supp);
-Xall.ineq = [Xall.ineq; W.ineq; XR];
-Xall.eq = [Xall.eq; W.eq];
+Xall.ineq = [Xall.ineq; XR];
+Xall.eq = [Xall.eq];
 
 X0 = fill_constraint(options.state_init);
 
 %X0.ineq = [X0.ineq; W.ineq; XR];
-X0.ineq = [X0.ineq; W.ineq];
-X0.eq = [X0.eq; W.eq];
+X0.ineq = [X0.ineq];
+X0.eq = [X0.eq];
 %leave risky, make sure that X0 is compact
 
 if iscell(options.dynamics.f)
@@ -115,8 +115,8 @@ for i = 1:nsys
     X{i} = fill_constraint(X{i});
     
     %add redundant constraint
-    X{i}.ineq = [Xall.ineq; X{i}.ineq; W.ineq];
-    X{i}.eq = [Xall.eq; X{i}.eq; W.eq];
+    X{i}.ineq = [Xall.ineq; X{i}.ineq];
+    X{i}.eq = [Xall.eq; X{i}.eq];
 end
 
 %time range of states
@@ -168,7 +168,8 @@ else
 end
 vars0 = [x; w];
 
-[p0, cons0, coeff0] = constraint_psatz(v0 - gamma, X0, vars0, d);
+X0_W = struct('ineq', [X0.ineq; W.ineq], 'eq', [X0.eq; W.eq]);
+[p0, cons0, coeff0] = constraint_psatz(v0 - gamma, X0_W, vars0, d);
 
 cons = [cons; cons0];
 coeff_list = [coeff_list; coeff0];
@@ -177,15 +178,17 @@ coeff_list = [coeff_list; coeff0];
 for i = 1:nsys
     
     Lv = jacobian(v, x) * f{i};
-    Xf = X{i};
+    %Xf = X{i};
+    Xf_W = struct('ineq', [X{i}.ineq; W.ineq], 'eq', [X{i}.eq; W.eq]);
+
     
     if ~TIME_INDEP
         Lv = Lv + jacobian(v, t);
         
         time_bound = (options.dynamics.Tmax(i) - t ) * (t - options.dynamics.Tmin(i));
-        Xf.ineq = [Xf.ineq; time_bound];
+        Xf_W.ineq = [Xf_W.ineq; time_bound];
     end
-    [pf, consf, coefff] = constraint_psatz(Lv, Xf, vars, d);
+    [pf, consf, coefff] = constraint_psatz(Lv, Xf_W, vars, d);
     
     cons = [cons; consf];
     coeff_list = [coeff_list; coefff];
@@ -194,18 +197,24 @@ end
 
 %deal with objective
 %add scaling later
+
+%all space
+Xall_W = struct('ineq', [Xall.ineq; W.ineq], 'eq', [Xall.eq; W.eq]);
+
+%objective handling
 obj = options.obj;
 if nobj == 1
     %single objective
-    [pc, consc, coeffc] = constraint_psatz(-v - obj, Xall, vars, d);
+    [pc, consc, coeffc] = constraint_psatz(-v - obj, Xall_W, vars, d);
     
     cons = [cons; consc];
     coeff_list = [coeff_list; coeffc];   
 else
     %minimum of multiple objectives
     %beta is a simplex weighting between different objectives
+    %still need to test this
     beta = sdpvar(nobj, 1);
-    [pc, consc, coeffc] = constraint_psatz(-v - sum(beta.*obj), Xall, vars, d);
+    [pc, consc, coeffc] = constraint_psatz(-v - sum(beta.*obj), Xall_W, vars, d);
     
     cons = [cons; consc; sum(beta) == 1; beta >= 0];
     coeff_list = [coeff_list; coeffc; beta];
@@ -233,7 +242,7 @@ opts.sos.numblk =  1e-3;
 
 [sol, monom, Gram, residual] = solvesos(cons, objective, opts, coeff_list);
 
-peak_val = value(gamma);
+peak_val = -value(gamma);
 
 
 
@@ -309,7 +318,11 @@ for i = 1:nsys
         end
         
 %         
-        Xval_curr = @(xt,wt) X_curr([xt;wt]);
+        Xval_curr = @(xt) X_curr([xt]);
+        
+        event_curr = @(tt, xt, wt) support_event(tt, xt, Xval_curr, ...
+            options.dynamics.Tmin(i), options.dynamics.Tmax(i));
+        
 %         
 %         %space is inside support, time between Tmin and Tmax
 %         %if event_curr=0 stop integration, and approach from either
@@ -334,13 +347,16 @@ for i = 1:nsys
         event_curr = @(tt, xt) support_event(tt, xt, Xval_curr, ...
             options.dynamics.Tmin(i), options.dynamics.Tmax(i));
         
-        event_curr_2 = @(tt, xt) cell2mat(cellfun(@(txp) event_curr(txp(1), txp(2:end)),...
-            num2cell([tt; xt], 1), 'UniformOutput', false));
+%         event_curr_2 = @(tt, xt) cell2mat(cellfun(@(txp) event_curr(txp(1), txp(2:end)),...
+%             num2cell([tt; xt], 1), 'UniformOutput', false));
+        %event_curr_2 = @(tt, xt) cell2mat(cellfun(@(txp) event_curr(txp(1), txp(2:end)), num2cell([tt; xt], 1), 'UniformOutput', false));
     end
 %     
     out.func.fval{i} = fval_curr;
     out.func.Xval{i} = Xval_curr;        
-    out.func.event{i} = event_curr_2;
+    %out.func.event{i} = event_curr_2;
+    out.func.event{i} = event_curr;
+    
     
 end
 % 
@@ -371,61 +387,56 @@ end
 vval = polyval_func(v_rec, vars);
 Lvval = polyval_func(Lv_rec, vars);
 
-v_nonneg = polyval_func(v_rec - peak_val, vars);
+v_nonneg = polyval_func(v_rec + peak_val, vars);
 cost_nonneg = polyval_func(-v_rec - sum(out.beta.*obj), vars);
 
-if TIME_INDEP
-    %out.func.vval  = @(tt, xt) vval(xt);
-    %out.func.Lvval = @(tt, xt) Lvval(xt);
-    out.func.vval = vval;
-    out.func.Lvval = Lvval;
-    
-%     curr_v_nonneg = @(tt, xt) v_nonneg(xt);
-%     curr_cost_nonneg = @(tt, xt) cost_nonneg(xt);
-    nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt) .* cell2mat(cellfun(@(ex) ex(zeros(1, size(xt, 2)), xt), ...
-        out.func.event, 'UniformOutput', false)); cost_nonneg(xt)];
-    %split data into cell, evaluate point at each cell, then recombine
-    %inefficient, but will do the job
-    out.func.nonneg = @(xt) cell2mat(cellfun(@(xp) nonneg_func(xp), num2cell(xt, 1), 'UniformOutput', false));
+if nw > 0
+    if TIME_INDEP
+        out.func.vval = @(xt, wt) vval([xt; wt*ones(1, size(xt, 2))]);
+        out.func.Lvval = @(xt, wt) Lvval([xt; wt*ones(1, size(xt, 2))]);
+
+        nonneg_func =  @(xt, wt) [v_nonneg([xt; wt*ones(1, size(xt, 2))]); Lvval([xt; wt*ones(1, size(xt, 2))]) .* cell2mat(cellfun(@(ex) ex(zeros(1, size(xt, 2)), xt), ...
+            out.func.event, 'UniformOutput', false)); cost_nonneg([xt; wt*ones(1, size(xt, 2))])];
+        %split data into cell, evaluate point at each cell, then recombine
+        %inefficient, but will do the job
+        out.func.nonneg = @(xt, wt) cell2mat(cellfun(@(xp) nonneg_func(xp, wt), num2cell(xt, 1), 'UniformOutput', false));
+    else
+        out.func.vval  = @(tt, xt, wt) vval([tt; xt; wt*ones(1, size(xt, 2))]);
+        out.func.Lvval = @(tt, xt, wt) Lvval([tt; xt; wt*ones(1, size(xt, 2))]);
+
+        curr_v_nonneg = @(tt, xt, wt) v_nonneg([tt; xt; wt*ones(1, size(xt, 2))]);
+        curr_cost_nonneg = @(tt, xt, wt) cost_nonneg([tt; xt; wt*ones(1, size(xt, 2))]);
+
+        nonneg_func = @(tt, xt, wt) [curr_v_nonneg(tt, xt, wt); out.func.Lvval(tt, xt, wt).* ...
+            cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'UniformOutput', false)); curr_cost_nonneg(tt, xt)];
+        %split data into cell, evaluate point at each cell, then recombine
+        %inefficient, but will do the job
+        out.func.nonneg = @(tt, xt, wt) cell2mat(cellfun(@(txp) nonneg_func(txp(1), txp(2:end), wt), num2cell([tt; xt], 1), 'UniformOutput', false));
+    end
 else
-    out.func.vval  = @(tt, xt) vval([tt; xt]);
-    %out.func.Lvval = @(tt, xt) Lvval([tt; xt]);
-    out.func.Lvval = @(tt, xt) Lvval([tt; xt]);
-    
-    curr_v_nonneg = @(tt, xt) v_nonneg([tt; xt]);
-    curr_cost_nonneg = @(tt, xt) cost_nonneg([tt; xt]);
-    
-%     out.func.nonneg = @(tt, xt) [curr_v_nonneg(tt, xt); out.func.Lvval(tt, xt); curr_cost_nonneg(tt, xt)];
-% nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt); cost_nonneg(xt)];
-    nonneg_func = @(tt, xt) [curr_v_nonneg(tt, xt); out.func.Lvval(tt, xt).* ...
-        cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'UniformOutput', false)); curr_cost_nonneg(tt, xt)];
-    %split data into cell, evaluate point at each cell, then recombine
-    %inefficient, but will do the job
-    out.func.nonneg = @(tt, xt) cell2mat(cellfun(@(txp) nonneg_func(txp(1), txp(2:end)), num2cell([tt; xt], 1), 'UniformOutput', false));
+    if TIME_INDEP
+        out.func.vval = vval;
+        out.func.Lvval = Lvval;
+
+        nonneg_func =  @(xt) [v_nonneg(xt); Lvval(xt) .* cell2mat(cellfun(@(ex) ex(zeros(1, size(xt, 2)), xt), ...
+            out.func.event, 'UniformOutput', false)); cost_nonneg(xt)];
+        %split data into cell, evaluate point at each cell, then recombine
+        %inefficient, but will do the job
+        out.func.nonneg = @(xt) cell2mat(cellfun(@(xp) nonneg_func(xp), num2cell(xt, 1), 'UniformOutput', false));
+    else
+        out.func.vval  = @(tt, xt) vval([tt; xt]);
+        out.func.Lvval = @(tt, xt) Lvval([tt; xt]);
+
+        curr_v_nonneg = @(tt, xt) v_nonneg([tt; xt]);
+        curr_cost_nonneg = @(tt, xt) cost_nonneg([tt; xt]);
+
+        nonneg_func = @(tt, xt) [curr_v_nonneg(tt, xt); out.func.Lvval(tt, xt).* ...
+            cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'UniformOutput', false)); curr_cost_nonneg(tt, xt)];
+        %split data into cell, evaluate point at each cell, then recombine
+        %inefficient, but will do the job
+        out.func.nonneg = @(tt, xt) cell2mat(cellfun(@(txp) nonneg_func(txp(1), txp(2:end)), num2cell([tt; xt], 1), 'UniformOutput', false));
+    end
 end
-
-
-
-% if TIME_INDEP
-%     
-% %     out.func.vval = @(xt) replace(v_rec, x, xt);    %dual v(t,x,w)
-% %     out.func.Lvval = @(xt) replace(Lv_rec, x, xt);   %Lie derivative Lv(t,x,w)
-% 
-%     out.func.vval  = @(xt) polyval_yalmip(v_rec, x, xt);    %dual v(t,x,w)
-%     out.func.Lvval = @(xt) polyval_yalmip(Lv_rec, x, xt);   %Lie derivative Lv(t,x,w)
-% 
-% 
-%     %out.func.nonneg = @(xt) [out.func.vval(xt) - peak_val; out.func.Lvval(xt); -out.func.vval(xt) - out.func.cost(xt)];
-%     out.func.nonneg = @(xt) [out.func.vval(xt) - peak_val, out.func.Lvval(xt), -out.func.vval(xt) - out.func.cost(xt)]';
-% else
-%     out.func.vval  = @(tt, xt) polyval_yalmip(v_rec, [t; x], [tt; xt]);    %dual v(t,x,w)
-%     out.func.Lvval = @(tt, xt) polyval_yalmip(Lv_rec, [t; x], [tt; xt]);   %Lie derivative Lv(t,x,w)
-% 
-% %     out.func.nonneg = @(tt, xt) [out.func.vval(tt, xt) - peak_val; out.func.Lvval(t, x); -out.func.vval(tt, xt) - out.func.cost(xt)];
-% out.func.nonneg = @(tt, xt) [out.func.vval(tt, xt) - peak_val, out.func.Lvval(t, x), -out.func.vval(tt, xt) - out.func.cost(xt)]';
-% end
-% 
-% 
 out.dynamics.nonneg = out.func.nonneg;
 %% Done!
 

@@ -420,7 +420,7 @@ out = struct;
 
 %recover optima
 out.order = order;
-out.peak_val = -obj_rec;
+out.peak_val = obj_rec;
 out.optimal = (rank0 == 1) && (rankp == 1);
 out.x0 = x0_rec;
 out.xp = xp_rec;
@@ -433,6 +433,8 @@ end
 
 if nw > 0
     out.w = double(mom(wp));
+else
+    out.w = [];
 end
 
 out.var = struct('t', tp, 'x', xp, 'w', wp);

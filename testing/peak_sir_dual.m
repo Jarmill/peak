@@ -2,11 +2,9 @@
 
 %Author: Jared Miller 6/25/20
 SOLVE = 1;
-PARAM = 0;
+PARAM = 2;
 
 PLOT = 1;
-
-
 
 beta0 = 0.4;
 gamma0 = 0.04;
@@ -16,19 +14,19 @@ beta_tol = 0.2;  % 20% uncertainty in infection rate
 gamma_tol = 0.1; % 10% uncertainty in removal rate
 
 if SOLVE    
-    mset clear
-    mpol('x', 2, 1);
-    
+    %mset clear
+    %mpol('x', 2, 1);
+    x = sdpvar(2, 1);
     if PARAM==2
         %beta and gamma
-        mpol('w', 2, 1);
-        Wsupp = (w.^2 <= [beta_tol; gamma_tol].^2);
+        w = sdpvar(2, 1);
+        Wsupp = struct('ineq',  [beta_tol; gamma_tol].^2 - w.^2);
         beta = beta0*(1 + w(1));
         gamma = gamma0*(1 + w(2));
     elseif PARAM == 1
         %beta only
-        mpol('w', 1, 1);
-        Wsupp = (w^2 <= beta_tol^2);
+        w = sdpvar(1, 1);
+        Wsupp = struct('ineq', w^2 <= beta_tol^2);
         beta = beta0*(1 + w);
         gamma = gamma0;
     else
@@ -38,9 +36,11 @@ if SOLVE
         gamma = gamma0;
     end
     
-    Xsupp = [sum(x) <= 1; x >= 0];
+    %Xsupp = [sum(x) <= 1; x >= 0];
+    Xsupp = struct('ineq', [1-sum(x); x]);
     
-    X0 = (x(2) <= I_max);
+    %X0 = (x(2) <= I_max);
+    X0 = struct('ineq', (I_max - x(2)));
     
     f = [-beta*x(1)*x(2); beta*x(1)*x(2) - gamma*x(2)];
     X = [];
@@ -66,13 +66,14 @@ if SOLVE
     p_opt.obj = objective;
     
     order = 4;
-    out = peak_estimate(p_opt, order);
+    out = peak_estimate_dual(p_opt, order);
 end
 
 if PLOT       
     rng(300, 'twister')
     %sample from X0 
-    Nsample = 120;
+    %Nsample = 120;
+    Nsample = 100;
     Tmax_sim = 30;
     
     rng(33, 'twister')
@@ -117,5 +118,7 @@ if PLOT
     xlabel('Time')
     ylabel('Susceptible')
     zlabel('Infected')
+    ylim([0, 1.1])
+    zlim([0, 1.1])
         
 end

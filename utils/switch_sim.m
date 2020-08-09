@@ -80,9 +80,9 @@ while time_total < Tmax
     possible_sys = [];
     for i = 1:nsys        
         if nw > 0
-            [event_value, ~, ~] = dynamics.event{i}(time_total, x0_curr, w0);
+            event_value = dynamics.event{i}(time_total, x0_curr, w0);
         else
-            [event_value, ~, ~] = dynamics.event{i}(time_total, x0_curr);
+            event_value = dynamics.event{i}(time_total, x0_curr);
         end
         if event_value == 1
             possible_sys = [possible_sys; i];

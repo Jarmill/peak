@@ -90,16 +90,18 @@ syms y [2 1]
 syms t
 
 subplot(1,3,1)
-if out.dynamics.time_indep && isempty(out.var.w)
-    %time independent
-    vy = out.func.vval(y) - out.peak_val;
-    
-    fimplicit(vy, [box_margin*xlim, box_margin*ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
-    vyt = 1e-8*t + vy ;
-else
-    vyt = out.func.vval(t, y) - out.peak_val;
-end    
-cy = out.func.cost(y) + out.peak_val;
+if isempty(out.var.w)
+    if out.dynamics.time_indep
+        %time independent
+        vy = out.func.vval(y) + out.peak_val;
+
+        fimplicit(vy, [box_margin*xlim, box_margin*ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
+        vyt = 1e-8*t + vy ;
+    else
+        vyt = out.func.vval(t, y) - out.peak_val;
+    end    
+end
+cy = out.func.cost(y) - out.peak_val;
 cyt = 1e-8*(t + sum(y)) + cy;
 fimplicit(cy + 1e-8*sum(y), [box_margin*xlim, box_margin*ylim],  '--r', 'DisplayName', 'Cost Bound', 'LineWidth', 2)
 
