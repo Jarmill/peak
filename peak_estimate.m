@@ -164,7 +164,7 @@ end
 
 if ~TIME_INDEP
     for i = 1:nsys
-        f{i} = subs(f{i}, tp, tp*options.Tmax);
+        f{i} = options.Tmax * subs(f{i}, tp, tp*options.Tmax);
     end
 end
 

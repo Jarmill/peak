@@ -24,7 +24,7 @@ for i = 1:length(out_sim)
         axis square
         hold on
         plot(out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), 'c', 'DisplayName', 'Trajectories');
-        title('Phase Plane of Trajectories')
+        title(['Phase Plane of Trajectories, order = ', num2str(out.order)])
         
         xlabel('x_1')
         ylabel('x_2')
@@ -38,11 +38,18 @@ for i = 1:length(out_sim)
         xlabel('time')
         ylabel('x_1')
         zlabel('x_2')
+        
+        %title formatting
+        peak_str = ['Peak Value for Trajectories = ', num2str(out.peak_val, 4)];
         if out.optimal
-            title(['Peak Value for Trajectories = ', num2str(out.peak_val, 3), ' (optimal),  order = ', num2str(out.order)])
-        else
-            title(['Peak Value for Trajectories = ', num2str(out.peak_val, 3), ', order = ', num2str(out.order)])
+            peak_str = [peak_str, ' (optimal)'];
+            if ~out.dynamics.time_indep
+                peak_str = [peak_str, ' at time = ', num2str(out.tp, 3)];
+            end
         end
+        
+        title(peak_str)
+
         
         
         legend('location', 'northwest') 
@@ -90,12 +97,15 @@ syms y [2 1]
 syms t
 
 subplot(1,3,1)
+xlim(stretch(xlim, box_margin))
+ylim(stretch(ylim, box_margin))
+
 if isempty(out.var.w)
     if out.dynamics.time_indep
         %time independent
         vy = out.func.vval(y) + out.peak_val;
 
-        fimplicit(vy, [stretch(xlim, box_margin), stretch(ylim, box_margin)], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
+        fimplicit(vy, [xlim, ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
         vyt = 1e-8*t + vy ;
     else
         vyt = out.func.vval(t, y) - out.peak_val;
@@ -107,8 +117,10 @@ fimplicit(cy + 1e-8*sum(y), [xlim, ylim],  '--r', 'DisplayName', 'Cost Bound', '
 
 subplot(1,3,[2,3])
 xlim([0, Tmax])
+ylim(stretch(ylim, box_margin))
+zlim(stretch(zlim, box_margin))
 if isempty(out.var.w)
-    fimplicit3(vyt, [xlim, stretch(ylim, box_margin), stretch(zlim, box_margin)], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
+    fimplicit3(vyt, [xlim, ylim, zlim], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
                 'DisplayName', 'Invariant Set')
 end
 
@@ -123,7 +135,7 @@ if out.optimal && (nargin == 3)
     %plot the peak functions too
     subplot(1,3, 1)
         
-    plot(out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), 'b', 'HandleVisibility', 'off');
+    plot(out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
 
     scatter(out.x0(1), out.x0(2), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
     scatter(out.xp(1), out.xp(2), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
@@ -131,7 +143,7 @@ if out.optimal && (nargin == 3)
     
     subplot(1,3, [2,3])
         
-    plot3(out_sim_peak{1}.t, out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), 'b', 'HandleVisibility', 'off');
+    plot3(out_sim_peak{1}.t, out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 3);
     
     
     scatter3(0, out.x0(1), out.x0(2), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        

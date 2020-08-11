@@ -8,11 +8,19 @@ TIME_VARYING = 0;
 
 PLOT = 1;
 
-Tmax_sim = 30;
+Tmax_sim = 40;
 
 beta0 = 0.4;
 gamma0 = 0.04;
 I_max = 0.1;
+
+
+%nominal quantities
+R0 = beta0/gamma0;
+S0 = 1-I_max;
+I0 = I_max;
+Sp = 1/R0;
+Ip = I0 + S0 - (1 + log(S0*R0))/R0;
 
 beta_tol = 0.2;  % 20% uncertainty in infection rate
 gamma_tol = 0.1; % 10% uncertainty in removal rate
@@ -65,8 +73,8 @@ if SOLVE
         p_opt.Tmax = Tmax_sim;        
     end
     %p_opt.scale = 0;
-%     p_opt.box = 0;
-    p_opt.box = 1;
+    p_opt.box = 0;
+%     p_opt.box = 1;
     
     %support sets
     p_opt.state_init = X0;
@@ -75,15 +83,15 @@ if SOLVE
     
     p_opt.obj = objective;
     
-    order = 3;
+    order = 5;
     out = peak_estimate(p_opt, order);
 end
 
 if PLOT       
     rng(300, 'twister')
     %sample from X0 
-    %Nsample = 120;
-    Nsample = 30;
+    Nsample = 120;
+%     Nsample = 30;
     
     rng(33, 'twister')
     if PARAM == 2
@@ -124,7 +132,7 @@ if PLOT
     
     subplot(1, 3, [2,3])
     plot3(zeros(5, 1), X0_pts(1, :), X0_pts(2, :), 'k', 'Linewidth', 3, 'DisplayName', 'Initial Set')
-    xlabel('Time')
+    xlabel('Time (Days)')
     ylabel('Susceptible')
     zlabel('Infected')
         
