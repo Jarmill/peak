@@ -4,7 +4,7 @@
 SOLVE = 1;
 PARAM = 0;
 
-TIME_VARYING = 0;
+TIME_VARYING = 1;
 
 PLOT = 1;
 
