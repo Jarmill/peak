@@ -68,10 +68,21 @@ nvar = nvar + nw;
 %scaling of the box
 xp = options.var.x;
 %TODO: deal with parameters nx -> nx + nw;
-[box, box_center, box_half] = box_process(nx, options.box);
+if length(options.box)==1 && options.box == 0
+    XR_scale = [];
+    XR_unscale = [];
+    
+    xp_scale = xp;
+    xp_inv_scale = xp;
+else    
+    [box, box_center, box_half] = box_process(nx, options.box);
 
-XR_scale = (xp.^2) <= 1;
-XR_unscale = (xp - box_center).^2 <= box_half.^2;
+    XR_scale = (xp.^2) <= 1;
+    XR_unscale = (xp - box_center).^2 <= box_half.^2;
+    
+    xp_scale = box_half.*xp + box_center;
+    xp_inv_scale = (xp - box_center) .* (1./box_half);
+end
 Xsupp = options.state_supp;
 
 %XR_scale = [xp <= 1; xp >= -1];
@@ -100,14 +111,17 @@ else
     X = {X};
 end
 
-%time range of states
+%time range of dynamics
 if ~isfield(options.dynamics, 'Tmin') || isempty(options.dynamics.Tmin)
     options.dynamics.Tmin = zeros(nsys, 1);
     options.dynamics.Tmax = ones(nsys, 1)*options.Tmax;
 end
 
+
+%time range of all trajectories
 if options.Tmax == Inf
-    TIME_INDEP = 1;       
+    TIME_INDEP = 1;    
+    Tsupp = [];
 else    
     TIME_INDEP = 0;    
     
@@ -119,20 +133,26 @@ else
         tp = options.var.t;
     end
     nvar = nvar + 1;
+    
+%     if options.scale
+        %always scale the time
+        Tsupp = tp*(1-tp) >= 0;
+%     else
+%         Tsupp = tp * (options.Tmax - tp) >= 0;
+%     end
 end
 
 
 
 %now scale everything
-if options.scale
-    xp_scale = box_half.*xp + box_center;
+if options.scale    
     for i = 1:nsys
-        if TIME_INDEP
-             f{i} = subs(f{i}, xp, xp_scale);
-        else
+%         if TIME_INDEP
+         f{i} = subs(f{i}, xp, xp_scale);
+%         else
             %afterwards, investigate scaling time to [-1, 1]
-            f{i} = subs(f{i}, [tp; xp], [tp/options.Tmax; xp_scale]);
-        end
+%             f{i} = subs(f{i}, [tp; xp], [tp/options.Tmax; xp_scale]);
+%         end
         
         X{i} = [subs([X{i}; Xsupp], xp, xp_scale); XR_scale];
     end
@@ -142,6 +162,11 @@ else
     end
 end
 
+if ~TIME_INDEP
+    for i = 1:nsys
+        f{i} = subs(f{i}, tp, tp*options.Tmax);
+    end
+end
 
 %number of objectives (1 standard, 2+ minimum)
 nobj = length(options.obj);
@@ -154,7 +179,8 @@ nobj = length(options.obj);
 %one peak measure
 
 if options.scale
-    Xp = [subs(options.state_supp, xp, xp_scale); Xsupp; XR];
+%     Xp = [subs(options.state_supp, xp, xp_scale); Xsupp; XR];
+    Xp = [Tsupp; subs(options.state_supp, xp, xp_scale); XR]; %that might be the bug (hopefully)
 else
     
     %this is where dual_rec breaks
@@ -163,13 +189,16 @@ else
     %dual_rec'monomials. Since X0 and X_occ are constrained within Xsupp,
     %this should not be a problem. If dynamics stay within Xsupp, then Xp
     %should be supported in Xsupp at optimality.
-    Xp = [XR];
+    Xp = [Tsupp; Xsupp; XR];
 end
 %deal with hanging variables and measures by letting the original x be the
 %peak measure
 
 %replace with time breaks
 mpol('x0', nx, 1);
+
+
+
 if options.scale
     X0_scale = subs(options.state_init, xp, xp_scale);
     
@@ -178,13 +207,15 @@ else
     X0 = subs([options.state_init; Xsupp; XR], xp, x0);
 end
 
+if TIME_INDEP
+    t0 = [];
+else
+    mpol('t0', 1, 1);
+    X0 = [t0 == 0; X0];
+end
 
 
-%occupation measure
-mpol('x_occ', nx, nsys);
-
-
-
+%deal with parameters
 if nw > 0
     %parameters
     wp = options.var.w;    
@@ -207,11 +238,15 @@ end
 
 
 
-mu = cell(nsys, 1);
+mu_occ = cell(nsys, 1);
+mon_occ = cell(nsys, 1);
 v = cell(nsys, 1);
 Ay = 0;
 %X = cell(nsys, 1);
 X_occ = []; %support
+
+%occupation measure
+mpol('x_occ', nx, nsys);
 
 %measure information
 if TIME_INDEP           
@@ -231,7 +266,7 @@ if TIME_INDEP
         %xcurr = x_occ(:, i);
         var_new = struct('t', [], 'x', x_occ(:, i), 'w', w_occ(:, i));
         
-        [mu{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
+        [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
             X{i}, options.var, var_new, d);
         
         X_occ = [X_occ; X_occ_curr];
@@ -248,19 +283,11 @@ else
     
     %peak time
     %mpol('tp', 1);
-    if options.scale
-        Xp = [Xp; tp*(1 - tp) >= 0];
-    else
-        Xp = [Xp; tp*(options.Tmax - tp) >= 0];
-    end
     mup = meas([tp; xp; wp]);
     monp = mmon([tp; xp; wp], d);
     yp = mom(monp);
     
-    %initial time
-    mpol('t0', 1);
-    %assign(t0, 0);
-    X0 = [X0; t0 == 0];                
+    %initial time             
     mu0 = meas([t0; x0; w0]); 
     mon0 = mmon([t0; x0; w0], d);
     y0 = mom(mon0);
@@ -268,23 +295,20 @@ else
     
     for i = 1:nsys
         var_new = struct('t', t_occ(i), 'x', x_occ(:, i), 'w', w_occ(:, i));
-        xcurr = x_occ(:, i);
-        mu{i} = meas([t_occ(i); xcurr]);
-        mon{i}  = mmon([t_occ(i); xcurr], d);
         
-        [mu{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, X{i}, options.var, var_new, d);
+        [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, X{i}, options.var, var_new, d);
         
         %support the valid time range
         Tmin_curr = options.dynamics.Tmin(i);
         Tmax_curr = options.dynamics.Tmax(i);
         
-        if options.scale
-            t_cons = (t_occ(i) - Tmin_curr/Tmax)*(Tmax_curr/Tmax - t_occ(i));            
-        else
-            t_cons = (t_occ(i) - Tmin_curr)*(Tmax_curr - t_occ(i));            
-        end
+%         if options.scale
+            t_cons = (t_occ(i) - Tmin_curr/options.Tmax)*(Tmax_curr/options.Tmax - t_occ(i));            
+%         else
+%             t_cons = (t_occ(i) - Tmin_curr)*(Tmax_curr - t_occ(i));            
+%         end
         
-        X_occ = [X_occ; X_occ_curr; t_cons >= 0];
+        X_occ = [X_occ; t_cons >= 0; X_occ_curr];
         Ay = Ay + Ay_curr;
         
         if nw > 0
@@ -299,17 +323,20 @@ end
 %% Form Constraints and Solve Problem
 
 %supp_con = [Xp; X0; X_occ; W];
-supp_con = [X_occ; Xp; X0; W];
+supp_con = [Xp; X0; X_occ; W];
 %careful of monic substitutions ruining dual variables
 Liou = Ay + (y0 - yp);
 mom_con = [mass(mu0) == 1; Liou == 0];
 
 obj = options.obj;
 if nobj == 1
-    if options.scale
-        cost = subs(obj, [tp; xp], [tp/options.Tmax; xp_scale]);
-    else
+    if TIME_INDEP
         cost = obj;
+    else
+        cost = subs(obj, tp, tp*options.Tmax);
+    end
+    if options.scale
+        cost = subs(obj, xp, xp_scale);
     end
     %cost = subs(options.obj, [options.var.t; options.var.x], [tp; xp]);
 else
@@ -326,11 +353,15 @@ else
     
     for i = 1:nobj
         %curr_obj = subs(options.obj(i), var.x, xp);
-        if options.scale
-            curr_obj = subs(obj, [tp; xp], [tp/options.Tmax; xp_scale]);
+        if TIME_INDEP   
+            curr_obj = options.obj(i);
         else
-            curr_obj = obj(i);
+            curr_obj = subs(options.obj(i), tp, tp*options.Tmax);
         end
+        if options.scale
+            curr_obj = subs(options.obj(i), xp, xp_scale);
+        end
+        
         curr_mom_con = (momc <= mom(curr_obj));
         mom_con = [mom_con; curr_mom_con];        
     end       
@@ -382,18 +413,17 @@ end
 
 %how does this work with moment substitutions?
 %necessary with c^2 + s^2 = 1
-xp_inv_scale = (xp - box_center) .* (1./box_half);
 if options.scale
     x0_rec = eval(xp_inv_scale, xp, x0_rec);
     xp_rec = eval(xp_inv_scale, xp, xp_rec);
-    if TIME_INDEP  
-        monp_unscale = subs(monp, xp, xp_inv_scale);
-    else
-        tp_rec = tp_rec * options.Tmax;
-        monp_unscale = subs(monp, [tp; xp], [tp*options.Tmax; xp_inv_scale]);        
-    end
+    monp_unscale = subs(monp, xp, xp_inv_scale);
 else
     monp_unscale = monp;
+end
+
+if ~TIME_INDEP  
+    tp_rec = tp_rec * options.Tmax;
+    monp_unscale = subs(monp, tp, tp/options.Tmax);        
 end
 
 %no more scaling should be necessary from this point on
@@ -403,6 +433,9 @@ end
 %v = dual_rec'*monp_unscale;
 %dual_rec_v = dual_rec((end - length(monp)+1):end);
 dual_rec_v = dual_rec(1:length(monp));
+
+%TODO: still need to deal with multiple cost functions (beta)
+
 v = dual_rec_v'*monp_unscale;
 Lv = [];
 for i = 1:nsys
@@ -539,7 +572,7 @@ out.dynamics.nonneg = out.func.nonneg;
 
 end
 
-function [mu, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
+function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
 %form the occupation measure
 %Input:
 %   f:      Dynamics (function)
@@ -550,6 +583,7 @@ function [mu, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
 %
 %Output:
 %   mu:     Measure
+%   mon:    monomoials
 %   X:      Support of measure
 %   Ay:     Adjoint of lie derivative, Liouville
 
@@ -576,8 +610,8 @@ function [mu, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
     f_occ = subs(f, vars_prev, vars_new);
     %f_occ = f(var_all);
     
-    mu = meas([x_occ; w_occ]);
-    mon = mmon([x_occ; w_occ], d);
+    mu = meas([t_occ; x_occ; w_occ]);
+    mon = mmon([t_occ; x_occ; w_occ], d);
 
     Ay = mom(diff(mon, x_occ)*f_occ);
     if ~isempty(var.t)
