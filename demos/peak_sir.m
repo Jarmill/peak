@@ -4,9 +4,11 @@
 SOLVE = 1;
 PARAM = 0;
 
+TIME_VARYING = 1;
+
 PLOT = 1;
 
-
+Tmax_sim = 30;
 
 beta0 = 0.4;
 gamma0 = 0.04;
@@ -58,6 +60,13 @@ if SOLVE
     p_opt.dynamics.f = f;
     p_opt.dynamics.X = X;
     
+    %time varying
+    if TIME_VARYING
+        p_opt.Tmax = Tmax_sim;        
+    end
+    p_opt.scale = 1;
+    p_opt.box = 0;
+    
     %support sets
     p_opt.state_init = X0;
     p_opt.state_supp = Xsupp;
@@ -65,15 +74,15 @@ if SOLVE
     
     p_opt.obj = objective;
     
-    order = 4;
+    order = 3;
     out = peak_estimate(p_opt, order);
 end
 
 if PLOT       
     rng(300, 'twister')
     %sample from X0 
-    Nsample = 120;
-    Tmax_sim = 30;
+    %Nsample = 120;
+    Nsample = 30;
     
     rng(33, 'twister')
     if PARAM == 2

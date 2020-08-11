@@ -80,8 +80,8 @@ p_opt.dynamics.X = X;
 Tmax_sim = 5;
 %p_opt.Tmax = Tmax_sim;
 
-%p_opt.box = 3;
-p_opt.scale = 1;
+p_opt.box = 4;
+% p_opt.scale = 1;
 %p_opt.R = 6;
 
 
@@ -107,7 +107,7 @@ sampler = @() circle_sample(1)'*R0 + C0;
 
 
 
-out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, @ode45);
+out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
 
 if (out.optimal == 1)
     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
