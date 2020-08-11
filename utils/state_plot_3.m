@@ -9,7 +9,7 @@ function [fig] = state_plot_3(out, out_sim, out_sim_peak)
 Tmax = out_sim{1}.t(end);
 nx = size(out_sim{1}.x, 2);
 
-box_margin = 0.4*[-1, 1];
+box_margin = 1.5;
 
 assert(nx==3);
 
@@ -67,7 +67,7 @@ MD = 110;
 if ~isfield(out, 'tp')
     %time independent
     vy = out.func.vval(y) - out.peak_val;    
-    fimplicit3(vy, [xlim+box_margin, ylim + box_margin, zlim + box_margin], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
+    fimplicit3(vy, [stretch(xlim, box_margin), stretch(ylim, box_margin), stretch(zlim, box_margin)], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Invariant Set', 'MeshDensity', MD)
     %vyt = 1e-8*t + vy ;
 else
@@ -75,13 +75,13 @@ else
 end    
 cy = out.func.cost(y) + out.peak_val;
 
-fimplicit3(cy + 1e-8*sum(y), [xlim+box_margin, ylim + box_margin, zlim + box_margin], 'EdgeColor', 'None','FaceColor', 'r', 'FaceAlpha', 0.3, ...
+fimplicit3(cy + 1e-8*sum(y), [xlim, ylim, zlim], 'EdgeColor', 'None','FaceColor', 'r', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Cost Bound', 'MeshDensity', MD)
 
 
 view(62, 17)
 
-if out.optimal
+if out.optimal && nargin == 3
     %plot the peak functions too
     plot3(out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), out_sim_peak{1}.x(:, 3), 'b', 'DisplayName', 'Peak Traj.', 'LineWidth', 2);
     %scatter3(out_sim_peak{1}.x(1, 1), out_sim_peak{1}.x(1, 2), out_sim_peak{1}.x(1, 3), 100, 'k', 'DisplayName', 'Initial Points');       

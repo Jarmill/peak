@@ -64,8 +64,9 @@ if SOLVE
     if TIME_VARYING
         p_opt.Tmax = Tmax_sim;        
     end
-    p_opt.scale = 1;
-    p_opt.box = 0;
+    %p_opt.scale = 0;
+%     p_opt.box = 0;
+    p_opt.box = 1;
     
     %support sets
     p_opt.state_init = X0;

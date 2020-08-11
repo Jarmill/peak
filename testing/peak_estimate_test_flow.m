@@ -14,46 +14,8 @@ mpol('x', 2, 1);
 Xsupp = [];
 
 %dynamics
-f1 = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
-f2 = [-x(1); -x(2)];
-f3 = [-0.1*x(1)-x(2); x(1) - 0.1*x(2)];
-%X1 = [x(2) <= 2];
-X1 = [];
-X2 = [];
-X3 = [];
-%X3 = [x(1) >= 0];
-
-%f = {f1, f2, f3};
-%X = {X1, X2, X3};
-
-f = f1;
-X = X1;
-
-%f = {f1, f3};
-%X = {X1, X3};
-%
-
-
-%f = {f3, f2};
-%X = {X3, X2};
-
-
-%f4 = [0 2; -1 -1]*x;
-%f5 = [1 2; -3 -2]*x;
-%f = {f4, f5};
-%X = {[], []};
-
-%f = f1;
-%X = X1;
-% 
-% f = f3;
-% X = X3;
-
-if iscell(f)
-    nsys = length(f);
-else
-    nsys = 1;
-end
+f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+X = [];
 
 
 %initial set
@@ -83,15 +45,14 @@ p_opt.dynamics.X = X;
 Tmax_sim = 5;
 %p_opt.Tmax = Tmax_sim;
 
-p_opt.box = 4;
+p_opt.box = 3;
 p_opt.scale = 0;
-%p_opt.R = 6;
 
 
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 4;
+order = 5;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 

@@ -77,7 +77,6 @@ p_opt.param = Wsupp;
 %p_opt.box = [-1, 1; -1, 1; -4, 4];
 p_opt.box = [1; 1];
 %p_opt.box = [theta_max; omega_max];
-p_opt.scale = 0;
 
 p_opt.obj = objective;
 %p_opt.Tmax = 20;

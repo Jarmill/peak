@@ -46,7 +46,7 @@ classdef peak_options < handle
         %box is [Bmin_i, Bmax_i]    -Bmin_i <= x_i <= Bmax_i
         box = 1; 
         
-        scale = 1; %should variables be scaled to [-1,1] (state) and [0,1] (time)
+        scale = 0; %should variables be scaled to [-1,1] (state) and [0,1] (time)
                         
         param = [];  %parameters w  
         
