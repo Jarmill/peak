@@ -11,6 +11,7 @@ nx = size(out_sim{1}.x, 2);
 
 box_margin = 1.5;
 
+
 assert(nx==2);
 
 fig = figure;
@@ -95,7 +96,8 @@ end
 %implicit curves
 syms y [2 1]
 syms t
-
+MD = 60;
+MD = 100;
 subplot(1,3,1)
 xlim(stretch(xlim, box_margin))
 ylim(stretch(ylim, box_margin))
@@ -111,22 +113,38 @@ if isempty(out.var.w)
         vyt = out.func.vval(t, y) - out.peak_val;
     end    
 end
-cy = out.func.cost(y) - out.peak_val;
-cyt = 1e-8*(t + sum(y)) + cy;
-fimplicit(cy + 1e-8*sum(y), [xlim, ylim],  '--r', 'DisplayName', 'Cost Bound', 'LineWidth', 2)
 
+nobj = length(out.func.beta);
+cyt = cell(nobj, 1);
+for i = 1:nobj % multiple objectives
+    curr_cost = @(y) out.func.cost_all{i}(y);
+
+
+    cy = curr_cost(y) - out.peak_val;
+    cyt{i} = 1e-8*(t + sum(y)) + cy;
+    if i == 1
+        fimplicit(cy + 1e-8*sum(y), [xlim, ylim],  '--r', 'DisplayName', 'Cost Bound', 'LineWidth', 2)
+    else
+        fimplicit(cy + 1e-8*sum(y), [xlim, ylim],  '--r', 'HandleVisibility', 'Off', 'LineWidth', 2)
+    end
+end
 subplot(1,3,[2,3])
 xlim([0, Tmax])
 ylim(stretch(ylim, box_margin))
 zlim(stretch(zlim, box_margin))
 if isempty(out.var.w)
     fimplicit3(vyt, [xlim, ylim, zlim], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
-                'DisplayName', 'Invariant Set')
+                'DisplayName', 'Invariant Set', 'MeshDensity', MD)
 end
-
-fimplicit3(cyt, [xlim, ylim, zlim], 'EdgeColor', 'None','FaceColor', 'r', 'FaceAlpha', 0.3, ...
+for i = 1:nobj
+    if i == 1
+        fimplicit3(cyt{i}, [xlim, ylim, zlim], 'EdgeColor', 'None','FaceColor', 'r', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Cost Bound')
-
+    else
+        fimplicit3(cyt{i}, [xlim, ylim, zlim], 'EdgeColor', 'None','FaceColor', 'r', 'FaceAlpha', 0.3, ...
+            'HandleVisibility', 'Off')
+    end
+end
 view(62, 17)
 
 

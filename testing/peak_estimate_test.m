@@ -49,12 +49,6 @@ X = X1;
 % f = f3;
 % X = X3;
 
-if iscell(f)
-    nsys = length(f);
-else
-    nsys = 1;
-end
-
 
 %initial set
 %C0 = [1.2; 0];
@@ -67,8 +61,11 @@ R0 = 0.4;
 X0 = ((x(1)-C0(1))^2 + (x(2)-C0(2))^2 <= R0^2);
 
 %objective to maximize
-objective = -x(2);
+%objective = -x(2);
 %objective = -x(2) - x(1);
+
+% objective = [-x(2); -x(1); -x(1) - x(2)];
+objective = [-x(2); -x(1)];
 %
 p_opt = peak_options;
 p_opt.var.x = x;
@@ -80,11 +77,11 @@ p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
 
-Tmax_sim = 5;
+Tmax_sim = 10;
 %p_opt.Tmax = Tmax_sim;
 
-p_opt.box = 8;
-p_opt.scale = 1;
+p_opt.box = 4;
+p_opt.scale = 0;
 %p_opt.R = 6;
 
 
@@ -104,8 +101,8 @@ x0 = C0;
 
 mu = 1;
 
-%Nsample = 100;
-Nsample = 20;
+Nsample = 100;
+%Nsample = 20;
 sampler = @() circle_sample(1)'*R0 + C0;
 
 out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);

@@ -339,6 +339,9 @@ else
     momc = mom(c);
     cost = momc;
     
+%     cost_mom_con = (mass(muc) == 1);
+    cost_mom_con = (mass(muc) == 1);
+%     cost_mom_con = [];
     for i = 1:nobj
         %curr_obj = subs(options.obj(i), var.x, xp);
         if TIME_INDEP   
@@ -350,9 +353,11 @@ else
             curr_obj = subs(options.obj(i), xp, xp_scale);
         end
         
-        curr_mom_con = (momc <= mom(curr_obj));
-        mom_con = [mom_con; curr_mom_con];        
-    end       
+        cost_mom_con = [cost_mom_con; (momc <= mom(curr_obj))];
+        
+    end 
+    
+    mom_con = [cost_mom_con; mom_con];
 end
 
 
@@ -420,9 +425,16 @@ end
 %find the ordering of dual_rec, and which entries correspond to v
 %v = dual_rec'*monp_unscale;
 %dual_rec_v = dual_rec((end - length(monp)+1):end);
-dual_rec_v = dual_rec(1:length(monp));
-
-%TODO: still need to deal with multiple cost functions (beta)
+dual_rec_v = dual_rec{1};
+if nobj == 1
+    beta = 1;
+    sos_mat = dual_rec{2:end};
+else
+    %this is an artifact of gloptipoly not having standard scalar
+    %variables. A degree-1 measure is required.
+    beta = dual_rec{2};
+    sos_mat = dual_rec{3:end};
+end
 
 v = dual_rec_v'*monp_unscale;
 Lv = [];
@@ -447,6 +459,10 @@ out.x0 = x0_rec;
 out.xp = xp_rec;
 out.M0 = M0_1;
 out.Mp = Mp_1;
+
+if nobj > 1
+    out.Mc = double(mmat(muc));
+end
 
 if ~TIME_INDEP
     out.tp = tp_rec;
@@ -515,9 +531,16 @@ event_all = @(tt, xt) cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'Unifor
 out.func = struct;
 out.func.dual_rec = dual_rec;
 out.func.v = v;
+out.func.beta = beta;
+out.func.sos_mat = sos_mat;
 out.func.Lv = Lv;
 
 %functions that should be nonnegative along valid trajectories
+out.func.cost_all = cell(nobj, 1);
+for i = 1:nobj
+    out.func.cost_all{i} = @(x) (eval(options.obj(i), xp, x));
+end
+
 if nobj > 1
     out.func.cost = @(x) min(eval(options.obj, xp, x));
 else
@@ -533,12 +556,12 @@ if nw > 0
         out.func.vval = @(x, w) eval(v, [xp; wp], [x; w*ones(1, size(x, 2))]);    %dual v(t,x,w)
         out.func.Lvval = @(x, w) eval(Lv, [xp; wp], [x; w*ones(1, size(x, 2))]);  %Lie derivative Lv(t,x,w)
 
-        out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x, w) - out.func.cost(x)];
+        out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x, w) - beta'*out.func.cost(x)];
     else
         out.func.vval = @(t, x, w) eval(v, [tp; xp; wp], [t; x; w*ones(1, size(x, 2))]);   %dual v(t,x,w)
         out.func.Lvval = @(t, x, w) eval(Lv, [tp; xp; wp],  [t; x; w*ones(1, size(x, 2))]);   %Lie derivative Lv(t,x,w)
 
-        out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w).*event_all(t, x); -out.func.vval(t, x, w) - out.func.cost(x)];
+        out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w).*event_all(t, x); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
     end
 
 else

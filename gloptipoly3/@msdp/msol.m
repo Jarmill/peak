@@ -146,15 +146,15 @@ else
  y = double(y);
  
  % dual variables
- dual_vars = [];
- for i = 1:numel(F)
-    dual_vars = [dual_vars  ; dual(F(i)) ]; % modified by Milan Korda
+ dual_vars = cell(length(F), 1);
+ for i = 1:length(F) %use length/cell to get all dual variables
+    dual_vars{i} = dual(F(i)); % modified by Milan Korda
  end
  
  if any(isnan(y))
   failure = true;
   y = zeros(size(y));
- end;
+ end
 
 end
 
