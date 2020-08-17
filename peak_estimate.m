@@ -134,12 +134,8 @@ else
     end
     nvar = nvar + 1;
     
-%     if options.scale
-        %always scale the time
-        Tsupp = tp*(1-tp) >= 0;
-%     else
-%         Tsupp = tp * (options.Tmax - tp) >= 0;
-%     end
+    Tsupp = tp*(1-tp) >= 0;
+
 end
 
 
@@ -147,12 +143,7 @@ end
 %now scale everything
 if options.scale    
     for i = 1:nsys
-%         if TIME_INDEP
-         f{i} = subs(f{i}, xp, xp_scale);
-%         else
-            %afterwards, investigate scaling time to [-1, 1]
-%             f{i} = subs(f{i}, [tp; xp], [tp/options.Tmax; xp_scale]);
-%         end
+        f{i} = subs((1./box_half) .*f {i}, xp, xp_scale);
         
         X{i} = [subs([X{i}; Xsupp], xp, xp_scale); XR_scale];
     end
@@ -302,11 +293,8 @@ else
         Tmin_curr = options.dynamics.Tmin(i);
         Tmax_curr = options.dynamics.Tmax(i);
         
-%         if options.scale
-            t_cons = (t_occ(i) - Tmin_curr/options.Tmax)*(Tmax_curr/options.Tmax - t_occ(i));            
-%         else
-%             t_cons = (t_occ(i) - Tmin_curr)*(Tmax_curr - t_occ(i));            
-%         end
+        t_cons = (t_occ(i) - Tmin_curr/options.Tmax)*(Tmax_curr/options.Tmax - t_occ(i));            
+
         
         X_occ = [X_occ; t_cons >= 0; X_occ_curr];
         Ay = Ay + Ay_curr;

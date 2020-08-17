@@ -1,5 +1,5 @@
 %test out arguments of peak_estimate routine
-%clear
+clear
 mset clear
 rng(300, 'twister')
 
@@ -54,19 +54,23 @@ p_opt.dynamics.X = X;
 p_opt.state_init = X0;
 p_opt.state_supp = Xsupp;
 %p_opt.box = [-6, 6];
-p_opt.box = 5;
 %p_opt.box = [-3, 4];
+
+%p_opt.box = 5;
 %p_opt.box = 6;
+p_opt.box = 8;
 p_opt.scale = 0;
 
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
 order = 4;
-out = peak_estimate(p_opt, order);
-peak_val = out.peak_val;
+%out = peak_estimate(p_opt, order);
+%peak_val = out.peak_val;
 
 p_opt_2 = p_opt;
 p_opt_2.scale = 1;
-out_scale = peak_estimate(p_opt, order);
+out_scale = peak_estimate(p_opt_2, order);
 peak_val_scale = out_scale.peak_val;
+
+scale_diff = peak_val - peak_val_scale;

@@ -83,8 +83,8 @@ p_opt.dynamics.X = X;
 Tmax_sim = 5;
 %p_opt.Tmax = Tmax_sim;
 
-p_opt.box = 4;
-p_opt.scale = 0;
+p_opt.box = 8;
+p_opt.scale = 1;
 %p_opt.R = 6;
 
 
