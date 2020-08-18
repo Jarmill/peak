@@ -1,6 +1,7 @@
-function [fig] = nonneg_plot(out_sim, out_sim_peak)
+function [fig] = nonneg_plot(out, out_sim, out_sim_peak)
 %NONNEG_PLOT Plot nonnegative functions (value, Lie derivatives, cost
 %comparision)
+%out:   output from peak estimation routine
 %out_sim: function evaluation on random sample trajectories
 %out_sim_peak: optional argument, function evaluation if peak is found at
 %x0
@@ -26,7 +27,6 @@ for i = 1:length(out_sim)
         
         if i == 1
             if k == 1
-                title('Value Function')
                 plot(t_curr, nonneg_curr(k, :), 'c','DisplayName', 'Trajectories')
                 title('Value Function along Trajectories')
                 xlabel('time')
@@ -55,12 +55,20 @@ for i = 1:length(out_sim)
     end       
 end
 
-if nargin == 2  
+if nargin == 3  
     for k = 1:(nplt)
         subplot(nplt, 1, k)
         hold on
-        plot(out_sim_peak{1}.t, out_sim_peak{1}.nonneg(k, :), 'b', 'LineWidth', 3, 'DisplayName', 'Peak Traj.')       
+        plot(out_sim_peak{1}.t, out_sim_peak{1}.nonneg(k, :), 'b', 'LineWidth', 3, 'DisplayName', 'Peak Traj.')           
     end       
+    
+    if ~out.dynamics.time_indep
+        peak_nonneg = out.func.nonneg(out.tp, out.xp);
+        for k = 1:nplt
+            subplot(nplt, 1, k)
+            scatter(out.tp(1), peak_nonneg(k), 300, '*b', 'Linewidth', 2, 'DisplayName', 'Peak Achieved')
+        end
+    end 
 end
 
 end

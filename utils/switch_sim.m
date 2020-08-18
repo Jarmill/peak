@@ -160,7 +160,7 @@ out_sim.break_sys = system_choice;
 out_sim.break_time = time_breaks;
 out_sim.break_index = time_index;
 out_sim.Tmax = Tmax;
-
+out_sim.cost = dynamics.cost(x_accum');
 %Evaluate (hopefully) nonnegative functions along trajectories
 if isfield(dynamics, 'nonneg')    
     if nw > 0

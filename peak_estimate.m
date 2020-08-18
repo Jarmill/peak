@@ -230,6 +230,7 @@ end
 
 
 mu_occ = cell(nsys, 1);
+mu_occ_sum = 0;
 mon_occ = cell(nsys, 1);
 v = cell(nsys, 1);
 Ay = 0;
@@ -260,6 +261,7 @@ if TIME_INDEP
         [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
             X{i}, options.var, var_new, d);
         
+        %mu_occ_sum = mu_occ_sum + mu_occ{i};
         X_occ = [X_occ; X_occ_curr];
         Ay = Ay + Ay_curr;
         
@@ -295,7 +297,7 @@ else
         
         t_cons = (t_occ(i) - Tmin_curr/options.Tmax)*(Tmax_curr/options.Tmax - t_occ(i));            
 
-        
+        %mu_occ_sum = mu_occ_sum + mu_occ{i};
         X_occ = [X_occ; t_cons >= 0; X_occ_curr];
         Ay = Ay + Ay_curr;
         
@@ -426,14 +428,14 @@ end
 %v = dual_rec'*monp_unscale;
 %dual_rec_v = dual_rec((end - length(monp)+1):end);
 dual_rec_v = dual_rec{1};
+dual_rec_v = dual_rec_v(1:length(monp_unscale));
+
 if nobj == 1
     beta = 1;
-    sos_mat = dual_rec{2:end};
 else
     %this is an artifact of gloptipoly not having standard scalar
     %variables. A degree-1 measure is required.
     beta = dual_rec{2};
-    sos_mat = dual_rec{3:end};
 end
 
 v = dual_rec_v'*monp_unscale;
@@ -457,9 +459,19 @@ out.peak_val = obj_rec;
 out.optimal = (rank0 == 1) && (rankp == 1);
 out.x0 = x0_rec;
 out.xp = xp_rec;
-out.M0 = M0_1;
-out.Mp = Mp_1;
+% out.M0 = M0_1;
+% out.Mp = Mp_1;
 
+%moment matrices
+out.M0 = M0;
+out.Mp = Mp;
+
+%occupation measure
+Mocc_cell=cellfun(@(m) double(mmat(m)), mu_occ, 'UniformOutput', false);
+Mocc = sum(cat(3, Mocc_cell{:}), 3);
+out.Mocc = Mocc;
+
+%objective
 if nobj > 1
     out.Mc = double(mmat(muc));
 end
@@ -532,7 +544,6 @@ out.func = struct;
 out.func.dual_rec = dual_rec;
 out.func.v = v;
 out.func.beta = beta;
-out.func.sos_mat = sos_mat;
 out.func.Lv = Lv;
 
 %functions that should be nonnegative along valid trajectories
@@ -578,6 +589,7 @@ else
     end
 end
 
+out.dynamics.cost = out.func.cost;
 out.dynamics.nonneg = out.func.nonneg;
 %% Done!
 

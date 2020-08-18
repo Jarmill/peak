@@ -151,22 +151,45 @@ view(62, 17)
 
 if out.optimal && (nargin == 3)
     %plot the peak functions too
-    subplot(1,3, 1)
-        
-    plot(out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
+    npeak_traj = length(out_sim_peak);
+    for k = 1:npeak_traj
+        if k == 1
+            subplot(1,3, 1)
 
-    scatter(out.x0(1), out.x0(2), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
-    scatter(out.xp(1), out.xp(2), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
- 
-    
-    subplot(1,3, [2,3])
-        
-    plot3(out_sim_peak{1}.t, out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 3);
-    
-    
-    scatter3(0, out.x0(1), out.x0(2), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
-    if isfield(out, 'tp')
-        scatter3(out.tp, out.xp(1), out.xp(2), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
+            plot(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
+
+            scatter(out.x0(1, k), out.x0(2, k), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
+            scatter(out.xp(1, k), out.xp(2, k), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
+
+
+            subplot(1,3, [2,3])
+
+            plot3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 3);
+
+
+            scatter3(0, out.x0(1, k), out.x0(2, k), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
+            if isfield(out, 'tp')
+                scatter3(out.tp(k), out.xp(1, k), out.xp(2, k), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
+            end
+        else
+            subplot(1,3, 1)
+
+            plot(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
+
+            scatter(out.x0(1, k), out.x0(2, k), 200, 'ob', 'HandleVisibility', 'off', 'LineWidth', 2);        
+            scatter(out.xp(1, k), out.xp(2, k), 200, '*b', 'HandleVisibility', 'off','LineWidth', 2);        
+
+
+            subplot(1,3, [2,3])
+
+            plot3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 3);
+
+
+            scatter3(0, out.x0(1, k), out.x0(2, k), 200, 'ob', 'HandleVisibility', 'off','LineWidth', 2);        
+            if isfield(out, 'tp')
+                scatter3(out.tp(k), out.xp(1, k), out.xp(2, k), 200, '*b', 'HandleVisibility', 'off','LineWidth', 2);        
+            end
+        end
     end
              
 end
