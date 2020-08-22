@@ -23,14 +23,6 @@ A = [0.2, 1; 0, -0.4];
 J = [0, -1; 1,  0];
 f = A*x + J*x*r2;
 
-%linearization at saddle
-[V, D] = eig(A);
-V_sym = sum(V, 2);
-V_sym = V_sym/norm(V_sym);
-
-% f0 = [0.2*x(1) + x(2) - x(2)*r2;
-%    -0.4*x(2) + x(1)*r2];
-
 X = [];
 
 % X = (x(2) >= 0)

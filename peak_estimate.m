@@ -68,7 +68,7 @@ nvar = nvar + nw;
 %scaling of the box
 xp = options.var.x;
 %TODO: deal with parameters nx -> nx + nw;
-if length(options.box)==1 && options.box == 0
+if isempty(options.box) || (length(options.box)==1 && options.box == 0)
     XR_scale = [];
     XR_unscale = [];
     
@@ -426,8 +426,9 @@ end
 %with equality constraints, dual_rec is bigger than just v
 %find the ordering of dual_rec, and which entries correspond to v
 %v = dual_rec'*monp_unscale;
-%dual_rec_v = dual_rec((end - length(monp)+1):end);
 dual_rec_v = dual_rec{1};
+% dual_rec_v = dual_rec_v((end - length(monp_unscale)+1):end);
+
 dual_rec_v = dual_rec_v(1:length(monp_unscale));
 
 if nobj == 1

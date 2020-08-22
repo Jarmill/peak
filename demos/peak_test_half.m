@@ -217,6 +217,10 @@ if PLOT
     set(hlines_c0, 'Color', 'c')
     set(hlines, 'Color', 'c', 'HandleVisibility','off')
     
+    
+    
+
+    
     if rank0 == 1 && rankp == 1
         %global optimum was found
         hlines_p = streamline(x, y, xdot, ydot, x0_out(1), x0_out(2));

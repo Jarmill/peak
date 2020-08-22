@@ -43,7 +43,7 @@ for i = 1:length(out_sim)
         %title formatting
         peak_str = ['Peak Value for Trajectories = ', num2str(out.peak_val, 4)];
         if out.optimal
-            peak_str = [peak_str, ' (optimal)'];
+            %peak_str = [peak_str, ' (optimal)'];
             if ~out.dynamics.time_indep
                 peak_str = [peak_str, ' at time = ', num2str(out.tp, 3)];
             end

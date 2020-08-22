@@ -1,4 +1,4 @@
-function [fig] = pend_plot_3(out_sim, out_sim_peak)
+function [fig] = pend_plot_3(out, out_sim, out_sim_peak)
 %STATE_PLOT_2 Plot states of system trajectories if x has 2 states
 %out: information about the recovered solution
 %out_sim: function evaluation on random sample trajectories

@@ -62,18 +62,22 @@ end
 syms y [3 1]
 syms t
 
-MD = 110;
+%MD = 110;
+
+
+MD = 60;
+
 
 if ~isfield(out, 'tp')
     %time independent
-    vy = out.func.vval(y) - out.peak_val;    
+    vy = out.func.vval(y) + out.peak_val;    
     fimplicit3(vy, [stretch(xlim, box_margin), stretch(ylim, box_margin), stretch(zlim, box_margin)], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Invariant Set', 'MeshDensity', MD)
     %vyt = 1e-8*t + vy ;
 else
     %vyt = out.func.vval(t, y) - out.peak_val;
 end    
-cy = out.func.cost(y) + out.peak_val;
+cy = out.func.cost(y) - out.peak_val;
 
 fimplicit3(cy + 1e-8*sum(y), [xlim, ylim, zlim], 'EdgeColor', 'None','FaceColor', 'r', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Cost Bound', 'MeshDensity', MD)
