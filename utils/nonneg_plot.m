@@ -70,7 +70,7 @@ if nargin == 3
         end
         for k = 1:nplt
             subplot(nplt, 1, k)
-            scatter(out.tp(1), peak_nonneg(k), 300, '*b', 'Linewidth', 2, 'DisplayName', 'Peak Achieved')
+            scatter(out.tp(1), peak_nonneg(k), 300, '*b', 'Linewidth', 2, 'HandleVisibility', 'Off')
         end
     end 
 end

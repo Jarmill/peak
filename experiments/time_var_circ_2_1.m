@@ -32,10 +32,10 @@ else
     sampler = @() ball_sample(1, 2)'*R0 + C0;
 end
 %objective to maximize
-objective = x(1);
+% objective = x(1);
 %objective = [x(1);  1/sqrt(5) * x(1) + 2/sqrt(5) *x(2)];
 
-% objective = [x(1); x(2)];
+objective = [x(1); x(2)];
 % 
 p_opt = peak_options;
 p_opt.var.x = x;
