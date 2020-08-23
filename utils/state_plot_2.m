@@ -9,7 +9,7 @@ function [fig] = state_plot_2(out, out_sim, out_sim_peak)
 Tmax = out_sim{1}.t(end);
 nx = size(out_sim{1}.x, 2);
 
-box_margin = 1.5;
+box_margin = 2;
 
 
 assert(nx==2);

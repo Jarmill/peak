@@ -198,13 +198,6 @@ else
     X0 = subs([options.state_init; Xsupp; XR], xp, x0);
 end
 
-if TIME_INDEP
-    t0 = [];
-else
-    mpol('t0', 1, 1);
-    X0 = [t0 == 0; X0];
-end
-
 
 %deal with parameters
 if nw > 0
@@ -216,9 +209,7 @@ if nw > 0
     W0 = subs(Wp, wp, w0);
     
     %W = [Wp; W0; wp == w0];
-    W = [Wp; W0];
-    
-    mpol('w_occ', nw, nsys);
+    W = [Wp; W0];  
     
 else
     W = [];    
@@ -227,6 +218,13 @@ else
     w0 = [];
 end
 
+
+if TIME_INDEP
+    t0 = [];
+else
+    mpol('t0', 1, 1);
+    X0 = [t0 == 0; X0];
+end
 
 
 mu_occ = cell(nsys, 1);
@@ -239,6 +237,11 @@ X_occ = []; %support
 
 %occupation measure
 mpol('x_occ', nx, nsys);
+if nw > 0
+    mpol('w_occ', nw, nsys);
+else
+    w_occ = zeros(0, nsys);
+end
 
 %measure information
 if TIME_INDEP           
@@ -272,7 +275,7 @@ if TIME_INDEP
     end
 else
     %define time variables
-    mpol('t_occ', 1, nsys);        
+    mpol('t_occ', 1, nsys);                    
     
     %peak time
     %mpol('tp', 1);
@@ -469,8 +472,10 @@ out.Mp = Mp;
 
 %occupation measure
 Mocc_cell=cellfun(@(m) double(mmat(m)), mu_occ, 'UniformOutput', false);
-Mocc = sum(cat(3, Mocc_cell{:}), 3);
-out.Mocc = Mocc;
+% Mocc = sum(cat(3, Mocc_cell{:}), 3);
+% out.Mocc = Mocc;
+
+out.Mocc = Mocc_cell;
 
 %objective
 if nobj > 1

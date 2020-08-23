@@ -1,5 +1,8 @@
 %spacecraft attitude control system with 1 degree of freedom 
 
+%theta_max = 20.6899 degrees
+%order = 5
+
 %https://homepages.laas.fr/henrion/papers/safev.pdf
 %find maximum angular velocity with hybrid controller
 mset clear
@@ -50,7 +53,9 @@ X = {X_lin, X_up, X_low};
 
 
 %objective to maximize
-objective = x(2)^2;        %maximum angular velocity
+% objective = x'*x;
+objective = x(1)^2;
+%objective = x(2)^2;        %maximum angular velocity
 % objective = u^2;
 
 %formulate problem
@@ -70,12 +75,53 @@ p_opt.scale = 0;
 
 p_opt.obj = objective;
 %p_opt.Tmax = 20;
-order = 4;
+order = 5;
 out = peak_estimate(p_opt, order);
 ang_max = sqrt(-out.peak_val);
 
 %visualize
 
+
+%deal with symmetry
+M0_mix = out.M0(2:3, 2:3);
+Mp_mix = out.Mp(2:3, 2:3);
+
+rank_sym_0 = rank(M0_mix, p_opt.rank_tol);
+rank_sym_p = rank(Mp_mix, p_opt.rank_tol);
+
+
+%% symmetry
+if rank_sym_0==1 && rank_sym_p==1
+    %the solution is optimal with symmetry
+    %the symmetry structure of the solution is x <=> -x
+    %equivariance: f(-x) = -f(x)
+    
+
+    
+    %find orbit of best initial point x0
+    sym_sign0 = sign(M0_mix(2,1));
+    x0_abs = sqrt([M0_mix(1,1); M0_mix(2,2)]);
+    x0 = [1; sym_sign0].* x0_abs;
+%     x0_neg = -x0_pos;
+    
+    %find orbit of peak achieved point xp
+    sym_signp = sign(Mp_mix(2,1));    
+    xp_abs = sqrt([Mp_mix(1,1); Mp_mix(2,2)]);
+    xp = [1; sym_signp].* xp_abs;
+%     xp_neg = -xp_pos;
+
+    %package into the output
+    if ~out.dynamics.time_indep
+        out.tp = [1 1] * out.tp;
+    end
+    out.x0 = [x0 -x0];
+    out.xp = [xp -xp];
+%     out.w = [1 1]*out.w;
+    out.optimal = 1;
+end
+    
+
+%% visualize
 %Nsample = 100;
 Tmax_sim = 30;
 Nsample = 50;
@@ -84,14 +130,21 @@ sampler = @() (2*rand(2, 1)-1) .* [theta_max; omega_max];
 out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim);
 
 if (out.optimal == 1)
-    out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
-    nplot = nonneg_plot(out_sim, out_sim_peak);
+    out_sim_peak = switch_sampler(out.dynamics, out.x0, 2, Tmax_sim);
+    nplot = nonneg_plot(out, out_sim, out_sim_peak);
 
     splot = state_plot_2(out, out_sim, out_sim_peak);
     %     splot = state_plot_N(out, out_sim, out_sim_peak);
 else
-    nplot = nonneg_plot(out_sim);
+    nplot = nonneg_plot(out, out_sim);
     splot = state_plot_2(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
 end
 
+
+%% saturation plot
+subplot(1,3,1)
+p = line_range([K 1], xlim, ylim);
+plot([p{1}(1), p{2}(1)], [p{1}(2), p{2}(2)], ':k', 'DisplayName', 'Saturation');
+p = line_range([K -1], xlim, ylim);
+plot([p{1}(1), p{2}(1)], [p{1}(2), p{2}(2)], ':k', 'HandleVisibility', 'Off');

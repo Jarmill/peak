@@ -2,7 +2,7 @@
 
 %Author: Jared Miller 6/25/20
 SOLVE = 1;
-PARAM = 0;
+PARAM = 1;
 
 TIME_VARYING = 1;
 
@@ -23,6 +23,7 @@ Sp = 1/R0;
 Ip = I0 + S0 - (1 + log(S0*R0))/R0;
 
 beta_tol = 0.2;  % 20% uncertainty in infection rate
+% beta_tol = 0;
 gamma_tol = 0.1; % 10% uncertainty in removal rate
 
 if SOLVE    
@@ -83,7 +84,7 @@ if SOLVE
     
     p_opt.obj = objective;
     
-    order = 5;
+    order = 3;
     out = peak_estimate(p_opt, order);
 end
 
@@ -111,13 +112,13 @@ if PLOT
     % display the results
     if (out.optimal == 1)        
         out_sim_peak = switch_sampler(out.dynamics, [out.x0; out.w], 1, Tmax_sim, 10, length(w));
-        nplot = nonneg_plot(out_sim, out_sim_peak);
+        nplot = nonneg_plot(out, out_sim, out_sim_peak);
 
         splot = state_plot_2(out, out_sim, out_sim_peak);
         
         %     splot = state_plot_N(out, out_sim, out_sim_peak);
     else
-        nplot = nonneg_plot(out_sim);
+        nplot = nonneg_plot(out, out_sim);
         splot = state_plot_2(out, out_sim);
     %     splot = state_plot_N(out, out_sim);
     end

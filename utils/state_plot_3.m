@@ -87,12 +87,24 @@ view(62, 17)
 
 if out.optimal && nargin == 3
     %plot the peak functions too
-    plot3(out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), out_sim_peak{1}.x(:, 3), 'b', 'DisplayName', 'Peak Traj.', 'LineWidth', 2);
-    %scatter3(out_sim_peak{1}.x(1, 1), out_sim_peak{1}.x(1, 2), out_sim_peak{1}.x(1, 3), 100, 'k', 'DisplayName', 'Initial Points');       
-    
-    %initial condition
-    scatter3(out.x0(1), out.x0(2), out.x0(3), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
-    scatter3(out.xp(1), out.xp(2), out.xp(3), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
+    npeak_traj = length(out_sim_peak);
+    for k = 1:npeak_traj
+        plot3(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), out_sim_peak{k}.x(:, 3), 'b',  'HandleVisibility', 'off', 'LineWidth', 2);
+            
+        if k == 1
+%             plot3(out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), out_sim_peak{1}.x(:, 3), 'b', 'DisplayName', 'Peak Traj.', 'LineWidth', 2);
+            
+            %initial condition
+            scatter3(out.x0(1, k), out.x0(2, k), out.x0(3, k), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
+            scatter3(out.xp(1, k), out.xp(2, k), out.xp(3, k), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
+        else
+            
+            
+            %initial condition
+            scatter3(out.x0(1, k), out.x0(2, k), out.x0(3, k), 200, 'ob',  'HandleVisibility', 'off', 'LineWidth', 2);        
+            scatter3(out.xp(1, k), out.xp(2, k), out.xp(3, k), 200, '*b',  'HandleVisibility', 'off', 'LineWidth', 2);        
+        end
+    end
 end
 
 end

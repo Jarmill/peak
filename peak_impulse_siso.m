@@ -194,7 +194,7 @@ syms xc [n, 1];
 
 if Tmax == Inf
     vv = conj(monolistYalToGlop(xc, d));
-    p = dual_rec'*vv;
+    p = dual_rec{1}'*vv;
     Lp = cell(nsys, 1);
     for i = 1:nsys
         Lp{i} = jacobian(p, xc)*A{i}*xc;
@@ -203,7 +203,7 @@ else
     syms tc;
     
     vv = conj(monolistYalToGlop([tc; xc], d));
-    p = dual_rec'*vv;
+    p = dual_rec{1}'*vv;
     for i = 1:nsys
         Lp{i} = jacobian(p, xc)*A{i}*xc + diff(p, tc);
     end

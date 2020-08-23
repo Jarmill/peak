@@ -20,7 +20,7 @@ A_func = cellfun(@(Ai) (@(t, x) Ai*x), A, 'UniformOutput', false);
 
 B = [1; 1];
 %C = [1 3];
-C = [1 0];
+% C = [1 0];
 
 nx = size(A{1});
 nu = size(B, 2);
