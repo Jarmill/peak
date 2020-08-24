@@ -79,7 +79,7 @@ p_opt.scale = 0;
 p_opt.rank_tol = 1e-3;
 p_opt.obj = objective;
 
-order = 3;
+order = 1;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
@@ -90,11 +90,11 @@ peak_val = out.peak_val;
 rng(50, 'twister')
 mu = 1;
 
-Nsample = 100;
+% Nsample = 100;
 
 % Nsample = 50;
 
-% Nsample = 20;
+Nsample = 20;
 
 
 out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0);
@@ -109,3 +109,5 @@ else
     cplot = cost_plot(out, out_sim);
     splot = state_plot_2(out, out_sim);
 end
+
+abs_val = sqrt(out.peak_val)

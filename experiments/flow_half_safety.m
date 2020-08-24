@@ -45,10 +45,10 @@ c1f = Ru^2 - (x(1) - Cu(1)).^2 - (x(2) - Cu(2)).^2;
 %tilt angle
 %order 5: 
 
-% theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1]
+theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1]
 % theta_c = 3*pi/4;       %p* = 0.1935, beta = [0.712, 0.287]
 % theta_c = 0;
-theta_c = 3*pi/2;    
+% theta_c = 3*pi/2;    
 % theta_c = 7*pi/4;
 
 w_c = [cos(theta_c); sin(theta_c)];
@@ -78,7 +78,7 @@ p_opt.scale = 0;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 5;
+order = 3;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
