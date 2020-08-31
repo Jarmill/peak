@@ -78,7 +78,7 @@ p_opt.scale = 0;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 3;
+order = 5;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 

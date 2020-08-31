@@ -169,7 +169,8 @@ end
 vars0 = [x; w];
 
 X0_W = struct('ineq', [X0.ineq; W.ineq], 'eq', [X0.eq; W.eq]);
-[p0, cons0, coeff0] = constraint_psatz(v0 - gamma, X0_W, vars0, d);
+% [p0, cons0, coeff0] = constraint_psatz(v0 - gamma, X0_W, vars0, d);
+[p0, cons0, coeff0] = constraint_psatz(v0 + gamma, X0_W, vars0, d);
 
 cons = [cons; cons0];
 coeff_list = [coeff_list; coeff0];
@@ -222,7 +223,8 @@ end
 
 %objective of the dual problem. Yes this is confusing
 if isempty(options.prev_cost)
-    objective = -gamma;
+%     objective = -gamma;
+    objective = gamma;
 else
     %feasibility program based on https://yalmip.github.io/Strictly-feasible-sum-of-squares/
     %but it doesn't work

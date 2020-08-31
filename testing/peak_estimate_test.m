@@ -61,11 +61,11 @@ R0 = 0.4;
 X0 = ((x(1)-C0(1))^2 + (x(2)-C0(2))^2 <= R0^2);
 
 %objective to maximize
-%objective = -x(2);
+objective = -x(2);
 %objective = -x(2) - x(1);
 
 % objective = [-x(2); -x(1); -x(1) - x(2)];
-objective = [-x(2); -x(1)];
+% objective = [-x(2); -x(1)];
 %
 p_opt = peak_options;
 p_opt.var.x = x;
@@ -109,12 +109,12 @@ out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45
 
 if (out.optimal == 1)
     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
-    nplot = nonneg_plot(out_sim, out_sim_peak);
+    nplot = nonneg_plot(out, out_sim, out_sim_peak);
 
     splot = state_plot_2(out, out_sim, out_sim_peak);
     %     splot = state_plot_N(out, out_sim, out_sim_peak);
 else
-    nplot = nonneg_plot(out_sim);
+    nplot = nonneg_plot(out, out_sim);
     splot = state_plot_2(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
 end

@@ -33,8 +33,11 @@ X = {X1, X2};
 
 f4 = [0 2; -1 -1]*x;
 f5 = [1 2; -3 -2]*x;
-f = {f4, f5};
-X = {[], []};
+% f = {f4, f5};
+% X = {[], []};
+
+f = f1;
+X = {[]};
 
 %initial set
 
@@ -104,7 +107,7 @@ out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu);
 % %     splot = state_plot_2(out, out_sim, out_sim_peak);
 %         splot = state_plot_N(out, out_sim, out_sim_peak);
 % else
-nplot = nonneg_plot(out_sim);
+nplot = nonneg_plot(out, out_sim);
 splot = state_plot_2(out, out_sim);
 % splot = state_plot_N(out, out_sim);
 % end

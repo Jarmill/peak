@@ -56,7 +56,8 @@ gX = R^2 - x(1)^2 - x(2)^2;
 %[stp, ctp] = polynomial([t;x], d-2);
 %[sxp, cxp] = polynomial([t;x], d-2);
 
-obj = -gamma;
+% obj = -gamma;
+obj = gamma;
 
 %dual program:
 
@@ -67,7 +68,8 @@ obj = -gamma;
 
 %initial conditions
 %cons = [sos(replace(v, t, 0) - gamma - gX0*sx0), sos(sx0)];
-cons = [sos(v - gamma - gX0*sx0), sos(sx0)];
+% cons = [sos(v - gamma - gX0*sx0), sos(sx0)];
+cons = [sos(v + gamma - gX0*sx0), sos(sx0)];
 %dynamics
 %cons = [cons, sos(Lv - gt*stf - gX*sxf), sos(stf), sos(sxf)];
 cons = [cons, sos(Lv - gX*sxf), sos(sxf)];
@@ -75,8 +77,9 @@ cons = [cons, sos(Lv - gX*sxf), sos(sxf)];
 %cons = [cons, sos(p - v - gt*stp - gX*sxp), sos(stp), sos(sxp)];
 cons = [cons, sos(-p - v - gX*sxp), sos(sxp)];
 
-
 [sol,monom,Q, res] = solvesos(cons, obj, opts, [cv; cx0; cxf; cxp; gamma]);
+
+pstar = value(gamma)
 
 
 % [Fsos, objsos, msos] = sosmodel(cons, obj, opts, [gamma; cv; cx0; cxf; cxp]);
