@@ -30,7 +30,7 @@ for i = 1:length(out_sim)
                 plot(t_curr, nonneg_curr(k, :), 'c','DisplayName', 'Trajectories')
                 title('Value Function along Trajectories')
                 xlabel('time')
-                ylabel('v(t,x) - \gamma')                
+                ylabel('v(t,x) + \gamma')                
                 legend('location', 'east')
             elseif k == nplt
                 title('Cost Comparision')
