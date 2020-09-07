@@ -41,11 +41,13 @@ function [out] = peak_estimate(options, order)
 %   x0:         Optimal initial condition
 %   xp:         Optimal point (obj(xp) = peak_val)
 %   tp:         Time of optimal point (if time-dependent, otherwise Inf)
-%   Mfix:       Moment Matrices of Fixed Distributions
+%   M0:         Moment Matrix of Initial Distribution
 %   Mp:         Moment Matrix of Peak Distribution
+%   Mocc:       Moment Matrix of Occupation Measure
 %
 %   v:          Polynomial from dual program, v(t, x) - gamma >=0 invariant
 %   Lv:         Lie derivatives along trajectories of system for v
+%   beta:       multiple cost tradeoff at optimal point
 
 if nargin < 2
     order = 3;
@@ -399,8 +401,8 @@ end
 M0_1 = M0(1:(nvar+1), 1:(nvar+1));
 Mp_1 = Mp(1:(nvar+1), 1:(nvar+1));
 
-rank0 = rank(Mp_1, options.rank_tol);
-rankp = rank(M0_1, options.rank_tol);
+rank0 = rank(M0_1, options.rank_tol);
+rankp = rank(Mp_1, options.rank_tol);
 
 x0_rec = double(mom(x0));
 xp_rec = double(mom(xp));
