@@ -30,18 +30,37 @@ for i = 1:length(out_sim)
                 plot(t_curr, nonneg_curr(k, :), 'c','DisplayName', 'Trajectories')
                 title('Value Function along Trajectories')
                 xlabel('time')
-                ylabel('v(t,x) + \gamma')                
+                if out.dynamics.time_indep
+                    ylabel('$v(x) + \gamma$', 'Interpreter', 'Latex')                
+                else    
+                    ylabel('$v(t,x) + \gamma$', 'Interpreter', 'Latex')                
+                end
                 legend('location', 'east')
             elseif k == nplt
                 title('Cost Comparision')
                 xlabel('time')
-                ylabel('-cost(x) - v(t,x)')
+%                 ylabel('-cost(x) - v(t,x)')
+                if out.dynamics.time_indep
+                    ylabel('$-v(x) -\beta^T p(x)$', 'Interpreter', 'Latex')                
+                else    
+                    ylabel('$-v(t, x) -\beta^T p(x)$', 'Interpreter', 'Latex')                
+                end
                 legend('location', 'east')
                 plot(t_curr, nonneg_curr(k, :), 'c', 'DisplayName', 'Trajectories')
             else
                 title(['Change in Value Function along System ', num2str(k-1)])
                 xlabel('time')
-                ylabel(['L_{f', num2str(k-1), '} v(t,x)'])
+%                 ylabel(['L_{f', num2str(k-1), '} v(t,x)'])
+                ylabel(['$L_{f', num2str(k-1), '} v(t,x)$'])
+                if out.dynamics.time_indep
+                    if out.dynamics.discrete
+                        ylabel(['$v \circ f_{', num2str(k-1),'}(x)  - v(x)$'], 'Interpreter', 'Latex') 
+                    else
+                        ylabel(['$L_{f', num2str(k-1), '} v(x)$'], 'Interpreter', 'Latex')                
+                    end
+                else    
+                    ylabel(['$L_{f', num2str(k-1), '} v(t,x)$'], 'Interpreter', 'Latex')                
+                end
                 legend('location', 'east')
                 plot(t_curr, nonneg_curr(k, :), 'c', 'DisplayName', 'Trajectories')
             end

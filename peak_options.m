@@ -10,7 +10,7 @@ classdef peak_options < handle
         %function dynamics
         %f: dynamics
         %X: space on which dynamics are valid (arbitrary switching)
-        dynamics = struct('f', [], 'X', {}, 'Tmin', [], 'Tmax', [])
+        dynamics = struct('f', [], 'X', {}, 'Tmin', [], 'Tmax', [], 'discrete', 0)
         
         
         %objective to minimize

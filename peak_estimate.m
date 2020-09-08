@@ -121,7 +121,7 @@ end
 
 
 %time range of all trajectories
-if options.Tmax == Inf
+if options.Tmax == Inf || options.dynamics.discrete
     TIME_INDEP = 1;    
     Tsupp = [];
 else    
@@ -264,7 +264,7 @@ if TIME_INDEP
         var_new = struct('t', [], 'x', x_occ(:, i), 'w', w_occ(:, i));
         
         [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
-            X{i}, options.var, var_new, d);
+            X{i}, options.var, var_new, d, options.dynamics.discrete);
         
         %mu_occ_sum = mu_occ_sum + mu_occ{i};
         X_occ = [X_occ; X_occ_curr];
@@ -294,7 +294,8 @@ else
     for i = 1:nsys
         var_new = struct('t', t_occ(i), 'x', x_occ(:, i), 'w', w_occ(:, i));
         
-        [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, X{i}, options.var, var_new, d);
+        [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(...
+            f{i}, X{i}, options.var, var_new, d, 0);
         
         %support the valid time range
         Tmin_curr = options.dynamics.Tmin(i);
@@ -447,9 +448,16 @@ end
 v = dual_rec_v'*monp_unscale;
 Lv = [];
 for i = 1:nsys
-    Lv_curr = diff(v, xp)*options.dynamics.f{i};
-    if ~TIME_INDEP
-        Lv_curr = Lv_curr + diff(v, tp);
+    if options.dynamics.discrete
+        %discrete time
+        pushforward = subs(v, xp, options.dynamics.f{i});
+        Lv_curr = pushforward - v;
+    else
+        %continuous time
+        Lv_curr = diff(v, xp)*options.dynamics.f{i};
+        if ~TIME_INDEP
+            Lv_curr = Lv_curr + diff(v, tp);
+        end
     end
     Lv = [Lv; Lv_curr];
 end
@@ -544,7 +552,7 @@ end
 out.dynamics = struct;
 out.dynamics.f = out.func.fval;
 out.dynamics.event = out.func.event;
-
+out.dynamics.discrete = options.dynamics.discrete;
 out.dynamics.time_indep = TIME_INDEP;
 event_all = @(tt, xt) cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'UniformOutput', false));
 %% functions and dual variables
@@ -574,13 +582,15 @@ if nw > 0
     if TIME_INDEP    
         out.func.vval = @(x, w) eval(v, [xp; wp], [x; w*ones(1, size(x, 2))]);    %dual v(t,x,w)
         out.func.Lvval = @(x, w) eval(Lv, [xp; wp], [x; w*ones(1, size(x, 2))]);  %Lie derivative Lv(t,x,w)
-
-        out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x, w) - beta'*out.func.cost(x)];
+        
+        out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w); -out.func.vval(x, w) - beta'*out.func.cost(x)];
+%         out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x, w) - beta'*out.func.cost(x)];
     else
         out.func.vval = @(t, x, w) eval(v, [tp; xp; wp], [t; x; w*ones(1, size(x, 2))]);   %dual v(t,x,w)
         out.func.Lvval = @(t, x, w) eval(Lv, [tp; xp; wp],  [t; x; w*ones(1, size(x, 2))]);   %Lie derivative Lv(t,x,w)
-
-        out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w).*event_all(t, x); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
+        
+        out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
+%         out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w).*event_all(t, x); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
     end
 
 else
@@ -588,12 +598,13 @@ else
         out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
         out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
 
-        out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x) - out.func.cost(x)];
+        out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
+%         out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x) - out.func.cost(x)];
     else
         out.func.vval = @(t, x) eval(v, [tp; xp], [t; x]);    %dual v(t,x,w)
         out.func.Lvval = @(t, x) eval(Lv, [tp; xp], [t; x]);   %Lie derivative Lv(t,x,w)
-
-        out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x).*event_all(t, x); -out.func.vval(t, x) - out.func.cost(x)];
+        out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x); -out.func.vval(t, x) - out.func.cost(x)];
+%         out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x).*event_all(t, x); -out.func.vval(t, x) - out.func.cost(x)];
     end
 end
 
@@ -603,7 +614,7 @@ out.dynamics.nonneg = out.func.nonneg;
 
 end
 
-function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
+function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, d, discrete)
 %form the occupation measure
 %Input:
 %   f:      Dynamics (function)
@@ -611,6 +622,7 @@ function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
 %   var:    variables of problem
 %   x_occ:  New variables for occupation measure
 %   d:      Degree of measure
+%   discrete: True (discrete system) or False (continuous system)
 %
 %Output:
 %   mu:     Measure
@@ -620,6 +632,10 @@ function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
 
     %var_all = [var.t; x_occ; var.w];
 
+    if nargin < 6
+        discrete = 0;
+    end
+    
     x_occ = var_new.x;
     
     if ~isempty(var_new.t)
@@ -643,12 +659,16 @@ function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, d)
     
     mu = meas([t_occ; x_occ; w_occ]);
     mon = mmon([t_occ; x_occ; w_occ], d);
-
-    Ay = mom(diff(mon, x_occ)*f_occ);
-    if ~isempty(var.t)
-        Ay = Ay + mom(diff(mon, t_occ));
-    end
     
+    if discrete
+        pushforward = subs(mon, vars_new, [f_occ; w_occ]);
+        Ay = mom(pushforward - mon);
+    else
+        Ay = mom(diff(mon, x_occ)*f_occ);
+        if ~isempty(var.t)
+            Ay = Ay + mom(diff(mon, t_occ));
+        end
+    end
     X_occ = subs(X, var.x, x_occ);
 
 end

@@ -64,7 +64,11 @@ for i = 1:Ns
         end
     end
 
-    out_sim{i} = switch_sim(dynamics, x0, Tmax, mu, Nw, odefcn);
+    if dynamics.discrete
+        out_sim{i} = switch_sim_discrete(dynamics, x0, Tmax, Nw);    
+    else
+        out_sim{i} = switch_sim(dynamics, x0, Tmax, mu, Nw, odefcn);
+    end
 end
 
 end

@@ -24,7 +24,11 @@ for i = 1:length(out_sim)
         subplot(1, 3, 1)
         axis square
         hold on
-        plot(out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), 'c', 'DisplayName', 'Trajectories');
+        if out.dynamics.discrete
+            scatter(out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), '.c', 'DisplayName', 'Trajectories');
+        else
+            plot(out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), 'c', 'DisplayName', 'Trajectories');
+        end
         title(['Phase Plane of Trajectories, order = ', num2str(out.order)])
         
         xlabel('x_1')
@@ -34,7 +38,11 @@ for i = 1:length(out_sim)
         
         subplot(1,3, [2,3])
         hold on        
-        plot3(out_sim{i}.t, out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), 'c', 'DisplayName', 'Trajectories');
+        if out.dynamics.discrete
+            scatter3(out_sim{i}.t, out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), '.c', 'DisplayName', 'Trajectories');
+        else
+            plot3(out_sim{i}.t, out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), 'c', 'DisplayName', 'Trajectories');
+        end
         pbaspect([2 1 1])         %2.25 1 1
         xlabel('time')
         ylabel('x_1')
@@ -59,17 +67,25 @@ for i = 1:length(out_sim)
     else
         subplot(1,3, 1)
         
-        plot(out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), 'c', 'HandleVisibility', 'off');
+        if out.dynamics.discrete
+            scatter(out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), '.c', 'HandleVisibility', 'off');        
+        else
+            plot(out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), 'c', 'HandleVisibility', 'off');
+        end
         
-
         subplot(1,3, [2,3])
+        if out.dynamics.discrete
+            scatter3(out_sim{i}.t, out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), '.c', 'HandleVisibility', 'off');
+        else
+            plot3(out_sim{i}.t, out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), 'c', 'HandleVisibility', 'off');
+        end
         
-        plot3(out_sim{i}.t, out_sim{i}.x(:, 1), out_sim{i}.x(:, 2), 'c', 'HandleVisibility', 'off');
+        
         
     end
 end
 
-
+%Initial conditions
 for i = 1:length(out_sim)
     if i == 1
        subplot(1,3, 1)
@@ -155,16 +171,21 @@ if out.optimal && (nargin == 3)
     for k = 1:npeak_traj
         if k == 1
             subplot(1,3, 1)
-
-            plot(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
-
+            if out.dynamics.discrete
+                scatter(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 60, '.b', 'HandleVisibility', 'off', 'Linewidth', 2);
+            else
+                plot(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
+            end
             scatter(out.x0(1, k), out.x0(2, k), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
             scatter(out.xp(1, k), out.xp(2, k), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
 
 
             subplot(1,3, [2,3])
-
-            plot3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 3);
+            if out.dynamics.discrete
+                scatter3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 60, '.b', 'HandleVisibility', 'off', 'Linewidth', 3);
+            else
+                plot3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 3);
+            end
 
 
             scatter3(0, out.x0(1, k), out.x0(2, k), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
@@ -173,17 +194,22 @@ if out.optimal && (nargin == 3)
             end
         else
             subplot(1,3, 1)
-
-            plot(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
-
+            
+            if out.func.discrete
+                scatter(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 60, '.b', 'HandleVisibility', 'off');
+            else
+                plot(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
+            end
             scatter(out.x0(1, k), out.x0(2, k), 200, 'ob', 'HandleVisibility', 'off', 'LineWidth', 2);        
             scatter(out.xp(1, k), out.xp(2, k), 200, '*b', 'HandleVisibility', 'off','LineWidth', 2);        
 
 
             subplot(1,3, [2,3])
-
-            plot3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 3);
-
+            if out.func.discrete
+                scatter3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 60, '.b', 'HandleVisibility', 'off');
+            else
+                plot3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 3);
+            end
 
             scatter3(0, out.x0(1, k), out.x0(2, k), 200, 'ob', 'HandleVisibility', 'off','LineWidth', 2);        
             if isfield(out, 'tp')

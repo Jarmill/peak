@@ -1,8 +1,7 @@
 function [out_sim] = switch_sim(dynamics, x0, Tmax, mu, nw, odefcn)
 %SWITCH_SIM Simulate a system that switches between different dynamics from
 %time 0 to Tmax. Switches are modeled by an exponential distribution with
-%mean mu. This assumes that all dynamics have the same valid region, will
-%need to work on the closed cover further later.
+%mean mu. Valid regions may be different between subsystems
 %
 % Input:
 %   dynamics:   A struct with fields:
