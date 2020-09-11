@@ -195,7 +195,7 @@ if out.optimal && (nargin == 3)
         else
             subplot(1,3, 1)
             
-            if out.func.discrete
+            if out.dynamics.discrete
                 scatter(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 60, '.b', 'HandleVisibility', 'off');
             else
                 plot(out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
@@ -205,7 +205,7 @@ if out.optimal && (nargin == 3)
 
 
             subplot(1,3, [2,3])
-            if out.func.discrete
+            if out.dynamics.discrete
                 scatter3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 60, '.b', 'HandleVisibility', 'off');
             else
                 plot3(out_sim_peak{k}.t, out_sim_peak{k}.x(:, 1), out_sim_peak{k}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 3);
