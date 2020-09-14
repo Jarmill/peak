@@ -67,6 +67,7 @@ p_opt.state_init = X0;
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
+p_opt.dynamics.discrete = 0;
 
 Tmax_sim = 5;
 %p_opt.Tmax = Tmax_sim;
@@ -216,7 +217,7 @@ if PLOT
     hold off
     axis square
     xlabel('x_1')
-    ylabel('y_1')
+    ylabel('x_2')
     
 end
 
