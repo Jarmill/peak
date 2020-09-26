@@ -103,6 +103,10 @@ end
 f = options.dynamics.f;
 X = options.dynamics.X;
 
+if ~isfield(options.dynamics, 'discrete')
+    options.dynamics.discrete = 0;
+end
+
 if iscell(options.dynamics.f)
     nsys = length(options.dynamics.f);
 else

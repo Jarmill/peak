@@ -62,6 +62,7 @@ p_opt.var.x = x;
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
+p_opt.dynamics.discrete = 0;
 
 Tmax_sim = 10;
 %p_opt.Tmax = Tmax_sim;

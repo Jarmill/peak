@@ -22,7 +22,7 @@ cons_mult = [];
 
 %equalities
 for i = 1:length(X.eq)
-    [seq, ceq] = polynomial(vars, d - degree(X.eq(i)));
+    [seq, ceq] = polynomial(vars, max(0,d - degree(X.eq(i))));
     
     p_out = p_out - seq * X.eq(i);    
     coeff_list = [coeff_list; ceq];    
@@ -30,7 +30,7 @@ end
 
 %inequalities
 for i = 1:length(X.ineq)
-    [sineq, cineq] = polynomial(vars, d - degree(X.ineq(i)));
+    [sineq, cineq] = polynomial(vars, max(0, d - degree(X.ineq(i))));
     
     p_out = p_out - sineq * X.ineq(i);
     coeff_list = [coeff_list; cineq];
