@@ -165,11 +165,11 @@ if (out.optimal == 1)
 %     splot = state_plot_3(out, out_sim, out_sim_peak);
 % %     splot = state_plot_N(out, out_sim, out_sim_peak);
 else
-    nplot = nonneg_plot(out_sim);
+    nplot = nonneg_plot(out, out_sim);
 %     splot = state_plot_2(out, out_sim);
 %     splot3 = state_plot_3(out, out_sim);
     %splot = state_plot_N(out, out_sim);
-    pplot = pend_plot_3(out_sim);
+    pplot = pend_plot_3(out, out_sim);
 end
 
 function u_out = u_hybrid(x, S, eps, delta, u_lqr, u_swing)

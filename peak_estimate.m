@@ -6,30 +6,31 @@ function [out] = peak_estimate(options, order)
 %   Accomodates switching as well.
 %
 %Input: options structure (peak_options) with fields:
-%   var:        Structure of symbolic variables (mpol)
+%   var:        Structure of symbolic variables (@mpol)
 %       t:      time (default empty)
 %       x:      state
 %       w:      parametric uncertainty (default empty)
-%
+% 
 %   Tmax:       Maximum time (if var.t is not empty)
-%
+% 
 %   dynamics:   Structure with fields (f, X)
 %       f:      dynamics x' = f(t,x) over the space X.
 %                   Each entry is a polynomial                
 %       X:      over what space do the dynamics evolve
 %                   this allows for switching, in case f and X are cells.
 %                   Each entry is an array of polynomials
-%
+% 
 %   obj:        Functions to maximize along trajectories
 %       Scalar:     Single function
 %       List:       Maximize the minimum of all objectives
 %                      Each entry is a polynomial       
 %   
-%   state_supp: Support set of X
-%   state_init: Support set of X0 (initial)
+%   state_supp: Support set of total set X (@supcon)
+%   state_init: Support set of initial set X0 (@supcon)
 %   param:      Support of parametric uncertainty w (if var.w nonempty)
 %       
 %   rank_tol:   Rank tolerance for moment matrix to be rank-1
+%   box:        Box containing valid region X, default to [-1, 1]^n
 %
 %Input (separate argument for convenience)
 %   order:      Order of relaxation

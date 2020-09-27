@@ -33,7 +33,7 @@ for i = 1:length(out_sim)
         legend('location', 'northwest') 
         
         if out.optimal
-            title(['Peak Value for Trajectories = ', num2str(out.peak_val, 3), ' (optimal),  order = ', num2str(out.order)])
+            title(['Peak Value for Trajectories = ', num2str(out.peak_val, 3), ' (recovered),  order = ', num2str(out.order)])
         else
             title(['Peak Value for Trajectories = ', num2str(out.peak_val, 3), ', order = ', num2str(out.order)])
         end

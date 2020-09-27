@@ -41,19 +41,16 @@ p_opt = peak_options;
 p_opt.var.x = x;
 p_opt.var.t = t;
 
-p_opt.state_supp = Xsupp;
+%p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
 
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
-p_opt.dynamics.discrete = 0;
 Tmax_sim = 5;
 p_opt.Tmax = Tmax_sim;
 
 p_opt.box = [-3, 2; -2, 2];
-p_opt.scale = 0;
-%p_opt.R = 6;
 
 
 p_opt.rank_tol = 1e-3;
