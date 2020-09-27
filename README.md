@@ -9,7 +9,7 @@ An occupation-measure framework is used to find a convergeng sequence of upper b
 - YALMIP: https://yalmip.github.io/
 - Mosek: https://www.mosek.com/ (or any solver compatible with YALMIP)
 
-Further documentation and directions to come.
+All code is written and tested on Matlab R2020a.
 
 ## Instructions
 The `peak_estimate` routine has two arguments: `p_opt` and `order`. The `order` is the relaxation order involving moments of degree `2*order`. 
