@@ -53,7 +53,7 @@ for i = 1:length(out_sim)
         if out.optimal
             %peak_str = [peak_str, ' (optimal)'];
             if ~out.dynamics.time_indep
-                peak_str = [peak_str, ' at time = ', num2str(out.tp, 3)];
+                peak_str = [peak_str, ' at time = ', num2str(out.tp(1), 3)];
             end
         end
         
@@ -126,7 +126,7 @@ if isempty(out.var.w)
         fimplicit(vy, [xlim, ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
         vyt = 1e-8*t + vy ;
     else
-        vyt = out.func.vval(t, y) - out.peak_val;
+        vyt = out.func.vval(t, y) + out.peak_val;
     end    
 end
 
