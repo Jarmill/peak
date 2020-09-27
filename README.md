@@ -50,7 +50,7 @@ https://arxiv.org/abs/2009.06120 "Peak Estimation and Recovery with Occupation M
 
 If you find this work useful, please cite:
 
-'''
+```
 @misc{miller2020peak,
     title={Peak Estimation and Recovery with Occupation Measures},
     author={Jared Miller and Didier Henrion and Mario Sznaier},
@@ -59,7 +59,7 @@ If you find this work useful, please cite:
     archivePrefix={arXiv},
     primaryClass={eess.SY}
 }
-'''
+```
 
 ## Contact
 For comments and questions please email [Jared Miller](mailto:miller.jare@northeastern.edu?Subject=CDCS).
