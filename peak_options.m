@@ -25,10 +25,12 @@ classdef peak_options < handle
         
         %% Variables and descriptors
         %variables (array of symbolic variables)
-%         t sym = [];     %time
-%         x sym = [];     %state
-%         w sym = [];     %uncertainty
-        var = struct('t', [], 'x', [], 'w', []);
+%           t:  time
+%           x:  state
+%           w:  time-independent uncertainty (parameters)
+%           d:  time-dependent uncertainty (general)
+%           b:  time-dependent uncertainty (constrained to a box)
+        var = struct('t', [], 'x', [], 'w', [], 'd', [], 'b', []);
         
         %% support sets
         %type @mpol/supcon
@@ -48,7 +50,12 @@ classdef peak_options < handle
         
         scale = 0; %should variables be scaled to [-1,1] (state) and [0,1] (time)
                         
-        param = [];  %parameters w  
+        param = [];       %parameters  w (@mpol/supcon)  
+        disturb = [];     %uncertainty d (@mpol/supcon)  
+        
+        %not needed, done implicitly.
+        %later will add conversion code to handle this
+%         disturb_box = []; %uncertainty b ([0,1]^number of b parameters)  
         
         %% additional options
         solver = 'mosek';

@@ -53,7 +53,7 @@ function [out] = peak_estimate(options, order)
 if nargin < 2
     order = 3;
 end
-d = 2*order;
+degree = 2*order;
 
 %% Process option data structure
 mset clearmeas
@@ -65,6 +65,13 @@ nvar = nx;
 %parameter variables
 nw = length(options.var.w);
 nvar = nvar + nw;
+
+
+nd = length(options.var.d);
+nvar = nvar + nd;
+
+nb = length(options.var.b);
+nvar = nvar + nb;
 
 %compact support (artificial)
 %XR = (sum(options.var.x.^2) <= options.R^2);
@@ -195,8 +202,6 @@ end
 %replace with time breaks
 mpol('x0', nx, 1);
 
-
-
 if options.scale
     X0_scale = subs(options.state_init, xp, xp_scale);
     
@@ -206,17 +211,17 @@ else
 end
 
 
-%deal with parameters
+%deal with time-independent uncertainty (parameters)
 if nw > 0
     %parameters
     wp = options.var.w;    
     mpol('w0', nw, 1);
     
     Wp = options.param;
-    W0 = subs(Wp, wp, w0);
-    
-    %W = [Wp; W0; wp == w0];
-    W = [Wp; W0];  
+%     W0 = subs(Wp, wp, w0);
+    W = Wp;
+    %Wp = W0 since w is time-independent
+%     W = [Wp; W0];  
     
 else
     W = [];    
@@ -224,7 +229,6 @@ else
     wp = [];
     w0 = [];
 end
-
 
 if TIME_INDEP
     t0 = [];
@@ -242,34 +246,54 @@ Ay = 0;
 %X = cell(nsys, 1);
 X_occ = []; %support
 
-%occupation measure
+%% occupation measure
+%state
 mpol('x_occ', nx, nsys);
+
+%time-independent parameter
 if nw > 0
     mpol('w_occ', nw, nsys);
 else
     w_occ = zeros(0, nsys);
 end
 
+%time-dependent general uncertainty
+if nd > 0
+    mpol('d_occ', nd, nsys);
+else
+    d_occ = zeros(0, nsys);
+end
+D = [];
+
+%time-dependent box in [0, 1]
+if nb > 0
+    mpol('b_occ', nb, nsys);
+else
+    b_occ = zeros(0, nsys);
+end
+%this will be tricky. deal with it later.
+%involves box control-occupation measures and absolute continuity
+%constraints.
+
+
 %measure information
 if TIME_INDEP           
     mup = meas([xp; wp]);
     tp = [];
-    monp = mmon([xp; wp], d);
+    monp = mmon([xp; wp], degree);
     yp = mom(monp);
     
     mu0 = meas([x0; w0]);
     t0 = [];
-    mon0 = mmon([x0; w0], d);
-    y0 = mom(mon0);
-    
-    %[mu, X, Ay] = occupation_measure(f, X, options.var, x_occ, d)
+    mon0 = mmon([x0; w0], degree);
+    y0 = mom(mon0);        
     
     for i = 1:nsys
-        %xcurr = x_occ(:, i);
-        var_new = struct('t', [], 'x', x_occ(:, i), 'w', w_occ(:, i));
+        var_new = struct('t', [], 'x', x_occ(:, i), 'w', w_occ(:, i), ...
+            'd', d_occ(:, i), 'b', b_occ(:, i));
         
         [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
-            X{i}, options.var, var_new, d, options.dynamics.discrete);
+            X{i}, options.var, var_new, degree, options.dynamics.discrete);
         
         %mu_occ_sum = mu_occ_sum + mu_occ{i};
         X_occ = [X_occ; X_occ_curr];
@@ -279,6 +303,11 @@ if TIME_INDEP
             W_curr = subs(Wp, wp, w_occ(:, i));
             W = [W; W_curr];
         end
+        
+        if nd > 0
+            D_curr = subs(options.disturb, options.var.d, d_occ(:, i));
+            D = [D; D_curr];
+        end
     end
 else
     %define time variables
@@ -287,20 +316,21 @@ else
     %peak time
     %mpol('tp', 1);
     mup = meas([tp; xp; wp]);
-    monp = mmon([tp; xp; wp], d);
+    monp = mmon([tp; xp; wp], degree);
     yp = mom(monp);
     
     %initial time             
     mu0 = meas([t0; x0; w0]); 
-    mon0 = mmon([t0; x0; w0], d);
+    mon0 = mmon([t0; x0; w0], degree);
     y0 = mom(mon0);
     
     
     for i = 1:nsys
-        var_new = struct('t', t_occ(i), 'x', x_occ(:, i), 'w', w_occ(:, i));
+        var_new = struct('t', t_occ(i), 'x', x_occ(:, i), 'w', w_occ(:, i),...
+            'd', d_occ(:, i), 'b', b_occ(:, i));
         
         [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(...
-            f{i}, X{i}, options.var, var_new, d, 0);
+            f{i}, X{i}, options.var, var_new, degree, 0);
         
         %support the valid time range
         Tmin_curr = options.dynamics.Tmin(i);
@@ -314,8 +344,12 @@ else
         
         if nw > 0
             W_curr = subs(Wp, wp, w_occ(:, i));
-            W = [W; W_curr];
-            %is 'w_occ(:, i) == wp' enforced implicitly?
+            W = [W; W_curr];            
+        end
+        
+        if nd > 0
+            D_curr = subs(options.disturb, options.var.d, d_occ(:, i));
+            D = [D; D_curr];
         end
     end
     
@@ -324,7 +358,7 @@ end
 %% Form Constraints and Solve Problem
 
 %supp_con = [Xp; X0; X_occ; W];
-supp_con = [Xp; X0; X_occ; W];
+supp_con = [Xp; X0; X_occ; W; D];
 %careful of monic substitutions ruining dual variables
 Liou = Ay + (y0 - yp);
 mom_con = [mass(mu0) == 1; Liou == 0];
@@ -560,6 +594,7 @@ out.dynamics.event = out.func.event;
 out.dynamics.discrete = options.dynamics.discrete;
 out.dynamics.time_indep = TIME_INDEP;
 event_all = @(tt, xt) cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'UniformOutput', false));
+
 %% functions and dual variables
 out.func = struct;
 out.func.dual_rec = dual_rec;
@@ -619,20 +654,20 @@ out.dynamics.nonneg = out.func.nonneg;
 
 end
 
-function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, d, discrete)
+function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, degree, discrete)
 %form the occupation measure
 %Input:
-%   f:      Dynamics (function)
-%   X:      Support set upon which dynamics take place
-%   var:    variables of problem
-%   x_occ:  New variables for occupation measure
-%   d:      Degree of measure
+%   f:        Dynamics (function)
+%   X:        Support set upon which dynamics take place
+%   var:      variables of problem [t,x,w,d,b]
+%   var_new:  New variables for occupation measure
+%   degree:   Degree of measure
 %   discrete: True (discrete system) or False (continuous system)
 %
 %Output:
-%   mu:     Measure
-%   mon:    monomoials
-%   X:      Support of measure
+%   mu:     Occupation Measure
+%   mon:    monomoials in Liouville constraint
+%   X:      Support of measure in state
 %   Ay:     Adjoint of lie derivative, Liouville
 
     %var_all = [var.t; x_occ; var.w];
@@ -655,15 +690,21 @@ function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, d, discre
         w_occ = [];
     end
     
-    vars_prev = [var.t; var.x; var.w];
-    vars_new = [t_occ; x_occ; w_occ];
+    if ~isempty(var_new.d)
+        d_occ = var_new.d;
+    else
+        d_occ = [];
+    end
     
-    %f_occ = subs(f, var.x, x_occ);
+    %box variables?
+    
+    vars_prev = [var.t; var.x; var.w; var.d];
+    vars_new = [t_occ; x_occ; w_occ; d_occ];
+    
     f_occ = subs(f, vars_prev, vars_new);
-    %f_occ = f(var_all);
     
-    mu = meas([t_occ; x_occ; w_occ]);
-    mon = mmon([t_occ; x_occ; w_occ], d);
+    mu = meas([t_occ; x_occ; w_occ; d_occ]);
+    mon = mmon([t_occ; x_occ; w_occ], degree);
     
     if discrete
         pushforward = subs(mon, vars_new, [f_occ; w_occ]);

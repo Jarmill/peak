@@ -4,7 +4,7 @@
 SOLVE = 1;
 PARAM = 1;
 
-TIME_VARYING = 1;
+TIME_VARYING = 0;
 
 PLOT = 1;
 
@@ -84,7 +84,7 @@ if SOLVE
     
     p_opt.obj = objective;
     
-    order = 3;
+    order = 4;
     out = peak_estimate(p_opt, order);
 end
 
