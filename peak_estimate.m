@@ -136,6 +136,7 @@ end
 if options.Tmax == Inf || options.dynamics.discrete
     TIME_INDEP = 1;    
     Tsupp = [];
+    tp = [];
 else    
     TIME_INDEP = 0;    
     
@@ -546,11 +547,26 @@ out.var = struct('t', tp, 'x', xp, 'w', wp);
 
 %Functions for evaluating system dynamics
 out.func.fval = cell(nsys, 1);  %dynamics
+out.func.fval_all = cell(nsys, 1);  %dynamics
 out.func.Xval = cell(nsys, 1);  %support set
 out.func.event = cell(nsys, 1); %Modification for ode45 event
 
 for i = 1:nsys
     Xval_curr = @(x) all(eval([options.dynamics.X{i}; XR_unscale], xp, x));
+    
+    
+    
+    %dynamics with all variables
+    %useful for updated switch sampling code including time-varying
+    %uncertainty
+    if TIME_INDEP
+        fval_curr_all = @(t, x, w, d, b) eval(options.dynamics.f{i}, ...
+            [xp; wp; options.var.d; options.var.b], [x; w; d; b]);
+    else
+        fval_curr_all = @(t,x, w, d, b) eval(options.dynamics.f{i}, ...
+            [tp; xp; wp; options.var.d; options.var.b], [t; x; w; d; b]);
+    end
+    
     if nw > 0
         %fval_curr = @(t,x,w) eval(options.dynamics.f{i}, [tp; xp; wp], [t; x; wp]);
         
@@ -559,10 +575,6 @@ for i = 1:nsys
         else
             fval_curr = @(t,x, w) eval(options.dynamics.f{i}, [tp; xp; wp], [t; x; w]);
         end
-        
-        
-%         Xval_curr = @(x,w) all(eval([options.dynamics.X{i}; XR_unscale], [xp; w], [x; w]));
-        
         %space is inside support, time between Tmin and Tmax
         %if event_curr=0 stop integration, and approach from either
         %direction (only going to be in negative direction, given that
@@ -575,14 +587,11 @@ for i = 1:nsys
         else
             fval_curr = @(t,x) eval(options.dynamics.f{i}, [tp; xp], [t; x]);
         end
-%         Xval_curr = @(x) all(eval([options.dynamics.X{i}; XR_unscale], xp, x));
-        
-        %event_curr = @(t,x) deal(all([Xval_curr(x); ...
-        %    t >= options.dynamics.Tmin(i); t < options.dynamics.Tmax(i)]), 1, 0);
         event_curr = @(t, x) support_event(t, x, Xval_curr, ...
             options.dynamics.Tmin(i), options.dynamics.Tmax(i));
     end
     
+    out.func.fval_all{i} = fval_curr_all;
     out.func.fval{i} = fval_curr;
     out.func.Xval{i} = Xval_curr;        
     out.func.event{i} = event_curr;
@@ -590,6 +599,7 @@ end
 
 out.dynamics = struct;
 out.dynamics.f = out.func.fval;
+out.dynamics.f_all = out.func.fval_all;
 out.dynamics.event = out.func.event;
 out.dynamics.discrete = options.dynamics.discrete;
 out.dynamics.time_indep = TIME_INDEP;

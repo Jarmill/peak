@@ -16,7 +16,7 @@ function [out_sim] = switch_sampler(dynamics, sampler, Ns, Tmax, mu, Nw, odefcn)
 %               X0 (inital point)
 %   Ns:         Number of sampled points to run
 %   x0:         Initial condition
-%   Nw:         Number of parameters (x0 -> [x0, w0]
+%   Nw:         Number of parameters x0 -> [x0, w0]
 %   Tmax:       Maximum time range of simulation
 %   mu:         Mean time for system switching
 %   odefcn:     Function handle to the ode solver (default ode15s to deal
