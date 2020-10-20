@@ -118,15 +118,18 @@ subplot(1,3,1)
 xlim(stretch(xlim, box_margin))
 ylim(stretch(ylim, box_margin))
 
-if isempty(out.var.w)
+% PLOT_V = isempty(out.var.w) && isempty(out.var.d) && isempty(out.var.b);
+PLOT_V = isempty(out.var.w);
+
+if PLOT_V
     if out.dynamics.time_indep
         %time independent
-        vy = out.func.vval(y) + out.peak_val;
+        vy = out.func.vval(t, y, []) + out.peak_val;
 
         fimplicit(vy, [xlim, ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
         vyt = 1e-8*t + vy ;
     else
-        vyt = out.func.vval(t, y) + out.peak_val;
+        vyt = out.func.vval(t, y, []) + out.peak_val;
     end    
 end
 
@@ -148,7 +151,8 @@ subplot(1,3,[2,3])
 xlim([0, Tmax])
 ylim(stretch(ylim, box_margin))
 zlim(stretch(zlim, box_margin))
-if isempty(out.var.w)
+
+if PLOT_V
     fimplicit3(vyt, [xlim, ylim, zlim], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
                 'DisplayName', 'Invariant Set', 'MeshDensity', MD)
 end

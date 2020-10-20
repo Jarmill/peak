@@ -52,8 +52,8 @@ p_opt.state_init = X0;
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
-Tmax_sim = 5;
-p_opt.Tmax = Tmax_sim;
+s_opt.Tmax = 5;
+p_opt.Tmax = s_opt.Tmax;
 
 p_opt.box = [-3, 2; -2, 2];
 
@@ -80,7 +80,7 @@ Nsample = 50;
 
 % Nsample = 20;
 
-out_sim = sampler(dynamics, Nsample, s_opt);
+out_sim = sampler(out.dynamics, Nsample, s_opt);
 % out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
 
 % if (out.optimal == 1)

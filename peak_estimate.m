@@ -542,7 +542,7 @@ else
     out.w = [];
 end
 
-out.var = struct('t', tp, 'x', xp, 'w', wp);
+out.var = struct('t', tp, 'x', xp, 'w', wp, 'd', options.var.d);
 
 
 %Functions for evaluating system dynamics
@@ -628,35 +628,62 @@ end
 %under multiple cost functions. Check that out later, proper dual
 %representation and verification of nonnegativity
 
-if nw > 0
-    if TIME_INDEP    
-        out.func.vval = @(x, w) eval(v, [xp; wp], [x; w*ones(1, size(x, 2))]);    %dual v(t,x,w)
-        out.func.Lvval = @(x, w) eval(Lv, [xp; wp], [x; w*ones(1, size(x, 2))]);  %Lie derivative Lv(t,x,w)
-        
-        out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w); -out.func.vval(x, w) - beta'*out.func.cost(x)];
-%         out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x, w) - beta'*out.func.cost(x)];
-    else
-        out.func.vval = @(t, x, w) eval(v, [tp; xp; wp], [t; x; w*ones(1, size(x, 2))]);   %dual v(t,x,w)
-        out.func.Lvval = @(t, x, w) eval(Lv, [tp; xp; wp],  [t; x; w*ones(1, size(x, 2))]);   %Lie derivative Lv(t,x,w)
-        
-        out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
-%         out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w).*event_all(t, x); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
-    end
 
+%b isn't needed with proper work on control-occupation
+
+if TIME_INDEP
+    fval_curr_all = @(t, x, w, d, b) eval(options.dynamics.f{i}, ...
+        [xp; wp; options.var.d; options.var.b], [x; w; d; b]);
 else
-    if TIME_INDEP    
-        out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
-        out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
-
-        out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
-%         out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x) - out.func.cost(x)];
-    else
-        out.func.vval = @(t, x) eval(v, [tp; xp], [t; x]);    %dual v(t,x,w)
-        out.func.Lvval = @(t, x) eval(Lv, [tp; xp], [t; x]);   %Lie derivative Lv(t,x,w)
-        out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x); -out.func.vval(t, x) - out.func.cost(x)];
-%         out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x).*event_all(t, x); -out.func.vval(t, x) - out.func.cost(x)];
-    end
+    fval_curr_all = @(t,x, w, d, b) eval(options.dynamics.f{i}, ...
+        [tp; xp; wp; options.var.d; options.var.b], [t; x; w; d; b]);
 end
+
+%simplify this abomination with [t;x;w;d;b]?
+if TIME_INDEP
+   out.func.vval = @(t, x, w) eval(v, [xp; wp], [x; repmat(w,size(x, 2))]);    %dual v(t,x,w)
+   out.func.Lvval = @(t, x, w, d) eval(Lv, ...
+       [xp; wp; options.var.d],  [x; repmat(w,size(x, 2)); d]);
+else    
+   out.func.vval = @(t, x, w) eval(v, [tp; xp; wp], [t; x; repmat(w,size(x, 2))]);    %dual v(t,x,w)
+   out.func.Lvval = @(t, x, w, d) eval(Lv, ...
+       [tp; xp; wp; options.var.d],  [t; x; repmat(w,size(x, 2)); d]);
+end
+
+%TODO: add functionality for b (sigma)
+out.func.nonneg = @(t, x, w, d, b) ...
+                [out.func.vval(t, x, w) + obj_rec; ...
+                out.func.Lvval(t, x, w, d, b); ...
+                -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
+% if nw > 0
+%     if TIME_INDEP    
+%         out.func.vval = @(x, w) eval(v, [xp; wp], [x; w*ones(1, size(x, 2))]);    %dual v(t,x,w)
+%         out.func.Lvval = @(x, w) eval(Lv, [xp; wp], [x; w*ones(1, size(x, 2))]);  %Lie derivative Lv(t,x,w)
+%         
+%         out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w); -out.func.vval(x, w) - beta'*out.func.cost(x)];
+% %         out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x, w) - beta'*out.func.cost(x)];
+%     else
+%         out.func.vval = @(t, x, w) eval(v, [tp; xp; wp], [t; x; w*ones(1, size(x, 2))]);   %dual v(t,x,w)
+%         out.func.Lvval = @(t, x, w) eval(Lv, [tp; xp; wp],  [t; x; w*ones(1, size(x, 2))]);   %Lie derivative Lv(t,x,w)
+%         
+%         out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
+% %         out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w).*event_all(t, x); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
+%     end
+% 
+% else
+%     if TIME_INDEP    
+%         out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
+%         out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
+% 
+%         out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
+% %         out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x) - out.func.cost(x)];
+%     else
+%         out.func.vval = @(t, x) eval(v, [tp; xp], [t; x]);    %dual v(t,x,w)
+%         out.func.Lvval = @(t, x) eval(Lv, [tp; xp], [t; x]);   %Lie derivative Lv(t,x,w)
+%         out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x); -out.func.vval(t, x) - out.func.cost(x)];
+% %         out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x).*event_all(t, x); -out.func.vval(t, x) - out.func.cost(x)];
+%     end
+% end
 
 out.dynamics.cost = out.func.cost;
 out.dynamics.nonneg = out.func.nonneg;

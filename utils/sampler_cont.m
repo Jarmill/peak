@@ -47,6 +47,9 @@ time_accum = [];
 x_accum = [];
 time_index= [];
 
+d_accum = [];
+b_accum = [];
+
 time_total = 0;
 
 system_choice = [];
@@ -81,9 +84,9 @@ while time_total < opts.Tmax
     
     %This system should be tracked for time time_track or if event is false
     if (nsys == 1) && (opts.Nb == 0) && (opts.Nd == 0)
-        time_track = Tmax;
+        time_track = opts.Tmax;
     else
-        time_track = exprnd(mu, 1, 1);
+        time_track = exprnd(opts.mu, 1, 1);
     end
     
     curr_sys = possible_sys(curr_sys_ind);
@@ -93,7 +96,7 @@ while time_total < opts.Tmax
 %     if opts.Nw > 0
         %includes uncertain fixed parameters
 %         curr_f = @(t, x) dynamics.f{curr_sys}(t, x, w0);\
-        curr_f = @(t, x) dynamics.f{curr_sys}(t, x, w0, d_curr, b_curr);
+        curr_f = @(t, x) dynamics.f_all{curr_sys}(t, x, w0, d_curr, b_curr);
         %currently w is not supported in event function. change this
         curr_event = @(t, x) dynamics.event{curr_sys}(t + time_total, x);
 %     else
@@ -104,12 +107,12 @@ while time_total < opts.Tmax
     
 
     
-    time_track_trunc = min(time_track, Tmax - time_total);
+    time_track_trunc = min(time_track, opts.Tmax - time_total);
     
     %simulate the current system
     curr_ode_options = odeset('Events',curr_event);
     
-    [time_curr, x_curr] = odefcn(curr_f, [0, time_track_trunc], x0_curr, curr_ode_options);
+    [time_curr, x_curr] = opts.odefcn(curr_f, [0, time_track_trunc], x0_curr, curr_ode_options);
     
     
     
@@ -124,8 +127,8 @@ while time_total < opts.Tmax
     time_total = time_total + time_curr(end);
     
     %time dependent uncertainty
-    d_accum = [d_accum; d_accum'];  %general
-    b_accum = [b_accum; b_accum'];  %box
+    d_accum = [d_accum; ones(size(x_curr, 1), 1)* d_curr'];  %general
+    b_accum = [b_accum; ones(size(x_curr, 1), 1)* b_curr'];  %box
     system_choice = [system_choice; curr_sys];  %system switching
     time_breaks = [time_breaks; time_total];
     
@@ -148,23 +151,24 @@ out_sim.b = b_accum;
 out_sim.break_sys = system_choice;
 out_sim.break_time = time_breaks;
 out_sim.break_index = time_index;
-out_sim.Tmax = Tmax;
+out_sim.Tmax = opts.Tmax;
 out_sim.cost = dynamics.cost(x_accum');
 %Evaluate (hopefully) nonnegative functions along trajectories
 if isfield(dynamics, 'nonneg')    
-    if opts.Nw > 0
-        if ~dynamics.time_indep
-            out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0);
-        else
-            out_sim.nonneg = dynamics.nonneg(x_accum', w0);
-        end
-    else
-        if ~dynamics.time_indep
-            out_sim.nonneg = dynamics.nonneg(time_accum', x_accum');
-        else
-            out_sim.nonneg = dynamics.nonneg(x_accum');
-        end
-    end
+    out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0, d_accum', b_accum');
+%     if opts.Nw > 0
+%         if ~dynamics.time_indep
+%             out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0);
+%         else
+%             out_sim.nonneg = dynamics.nonneg(x_accum', w0);
+%         end
+%     else
+%         if ~dynamics.time_indep
+%             out_sim.nonneg = dynamics.nonneg(time_accum', x_accum');
+%         else
+%             out_sim.nonneg = dynamics.nonneg(x_accum');
+%         end
+%     end
 end
 
 end
