@@ -177,7 +177,7 @@ end
 %number of objectives (1 standard, 2+ minimum)
 nobj = length(options.obj);
 
-%% Measures and variables
+%% Initial and Peak Variables
 %measures in the problem:
 %start with no time breaks, one initial measure
 %one occupation measure per switched systems
@@ -219,13 +219,15 @@ if nw > 0
     mpol('w0', nw, 1);
     
     Wp = options.param;
-%     W0 = subs(Wp, wp, w0);
+    W0 = subs(Wp, wp, w0);
     W = Wp;
     %Wp = W0 since w is time-independent
-%     W = [Wp; W0];  
+    %enforce it explicitly for the sake of compactness
+    W = [Wp; W0];  
     
 else
     W = [];    
+    Wp = [];
     w_occ = zeros(0, nsys);
     wp = [];
     w0 = [];
@@ -238,6 +240,19 @@ else
     X0 = [t0 == 0; X0];
 end
 
+%% Initial and Peak Measures
+
+%peak time
+%mpol('tp', 1);
+mup = meas([tp; xp; wp]);
+monp = mmon([tp; xp; wp], degree);
+yp = mom(monp);
+
+%initial time             
+mu0 = meas([t0; x0; w0]); 
+mon0 = mmon([t0; x0; w0], degree);
+y0 = mom(mon0);
+
 
 mu_occ = cell(nsys, 1);
 mu_occ_sum = 0;
@@ -247,12 +262,18 @@ Ay = 0;
 %X = cell(nsys, 1);
 X_occ = []; %support
 
-%% occupation measure
-%box occupation
-
+%% occupation measure variables
 
 %state
 mpol('x_occ', nx, nsys);
+
+%time
+if TIME_INDEP
+    t_occ = zeros(0, nsys);
+else
+    mpol('t_occ', 1, nsys);
+end
+
 
 %time-independent parameter
 if nw > 0
@@ -273,27 +294,7 @@ D = [];
 
 BOX_VAR = nb > 0 && ~options.dynamics.discrete;
 
-if BOX_VAR
-    tb = cell(nb, 1); %box variables x
-    tc = cell(nb, 1); %complement box variables x
-    
-%     if TIME_INDEP
-%         tb = zeros(0, nsys);
-%         tc = zeros(0, nsys);
-%     else
-    if ~TIME_INDEP
-        for k = 1:nb
-            %define variables
-            mpol(strcat('tb', num2str(k)), 1, nsys);
-            mpol(strcat('tc', num2str(k)), 1, nsys);
-
-            %add variables to cells (janky code but it works)
-            tb{k} = eval(strcat('tb', num2str(k)));
-            tc{k} = eval(strcat('tc', num2str(k)));
-        end
-    end
-    
-    
+if BOX_VAR       
     %state variable x
     xb = cell(nb, 1); %box variables x
     xc = cell(nb, 1); %complement box variables x
@@ -306,6 +307,22 @@ if BOX_VAR
         xb{k} = eval(strcat('xb', num2str(k)));
         xc{k} = eval(strcat('xc', num2str(k)));
     end
+    
+    %time variable t
+    tb = cell(nb, 1); %box variables x
+    tc = cell(nb, 1); %complement box variables x
+    if ~TIME_INDEP
+        for k = 1:nb
+            %define variables
+            mpol(strcat('tb', num2str(k)), 1, nsys);
+            mpol(strcat('tc', num2str(k)), 1, nsys);
+
+            %add variables to cells (janky code but it works)
+            tb{k} = eval(strcat('tb', num2str(k)));
+            tc{k} = eval(strcat('tc', num2str(k)));
+        end
+    end
+    
     
     %parameter variable w (time independent)
     wb = cell(nw, 1); %box variables x
@@ -351,107 +368,60 @@ end
 %involves box control-occupation measures and absolute continuity
 %constraints.
 
-
 %% Form the occupation measures
-if TIME_INDEP           
-    mup = meas([xp; wp]);
-    tp = [];
-    monp = mmon([xp; wp], degree);
-    yp = mom(monp);
+%support of occupation measure
+supp_occ = struct('T', [], 'X', [], 'W', [], 'D', []);
+
+%absolute continuity constraint for box program
+abscont = [];
+
+ for i = 1:nsys
     
-    mu0 = meas([x0; w0]);
-    t0 = [];
-    mon0 = mmon([x0; w0], degree);
-    y0 = mom(mon0);        
-    
-    %absolute continuity constraint
-    %in case 
-    abscont = [];
-    
-    for i = 1:nsys
-        var_new = struct('t', [], 'x', x_occ(:, i), 'w', w_occ(:, i), ...
-            'd', d_occ(:, i));
-        
-        if BOX_VAR
-            %control-occupation measures with box variables b in [0, 1]
-            %efficient formulation only valid if system is continuous
-        else        
-            [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
-                X{i}, options.var, var_new, degree, options.dynamics.discrete);
-        end
-        %mu_occ_sum = mu_occ_sum + mu_occ{i};
-        X_occ = [X_occ; X_occ_curr];
-        Ay = Ay + Ay_curr;
-        
-        if nw > 0
-            W_curr = subs(Wp, wp, w_occ(:, i));
-            W = [W; W_curr];
-        end
-        
-        if nd > 0
-            D_curr = subs(options.disturb, options.var.d, d_occ(:, i));
-            D = [D; D_curr];
-        end
-    end
-else
-    %define time variables
-    mpol('t_occ', 1, nsys);                    
-    
-    %peak time
-    %mpol('tp', 1);
-    mup = meas([tp; xp; wp]);
-    monp = mmon([tp; xp; wp], degree);
-    yp = mom(monp);
-    
-    %initial time             
-    mu0 = meas([t0; x0; w0]); 
-    mon0 = mmon([t0; x0; w0], degree);
-    y0 = mom(mon0);
-    
-    
-    for i = 1:nsys
-        var_new = struct('t', t_occ(i), 'x', x_occ(:, i), 'w', w_occ(:, i),...
-            'd', d_occ(:, i), 'b', b_occ(:, i));
-        
-        %TODO: finish this part
-        if BOX_VAR
-            %control-occupation measures with box variables b in [0, 1]
-            %efficient formulation only valid if system is continuous
-        else        
-            [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
-                X{i}, options.var, var_new, degree, options.dynamics.discrete);
-        end
-        
-        %support the valid time range
+    %support the valid time range
+    if TIME_INDEP
+        t_curr = [];
+        t_cons = [];
+    else            
+        t_curr = t_occ(i);
         Tmin_curr = options.dynamics.Tmin(i);
         Tmax_curr = options.dynamics.Tmax(i);
-        
-        t_cons = (t_occ(i) - Tmin_curr/options.Tmax)*(Tmax_curr/options.Tmax - t_occ(i));            
-
-        %mu_occ_sum = mu_occ_sum + mu_occ{i};
-        X_occ = [X_occ; t_cons >= 0; X_occ_curr];
-        Ay = Ay + Ay_curr;
-        
-        if nw > 0
-            W_curr = subs(Wp, wp, w_occ(:, i));
-            W = [W; W_curr];            
-        end
-        
-        if nd > 0
-            D_curr = subs(options.disturb, options.var.d, d_occ(:, i));
-            D = [D; D_curr];
-        end
+        t_cons = (tp - Tmin_curr/options.Tmax)*(Tmax_curr/options.Tmax - tp) >= 0;            
     end
     
+    var_new = struct('t', t_curr, 'x', x_occ(:, i), 'w', w_occ(:, i),...
+        'd', d_occ(:, i));
+
+    supp_curr = struct('T', t_cons, 'X', X{i}, 'W', Wp, 'D', options.disturb);
+    
+    %TODO: finish this part
+    if BOX_VAR
+        %control-occupation measures with box variables b in [0, 1]
+        %efficient formulation only valid if system is continuous
+    else        
+        [mu_occ{i}, mon_occ{i}, supp_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
+            supp_curr, options.var, var_new, degree, options.dynamics.discrete);
+    end
+
+    %append supports of current system
+    supp_occ.T = [supp_occ.T; supp_occ_curr.T];
+    supp_occ.X = [supp_occ.X; supp_occ_curr.X];
+    supp_occ.W = [supp_occ.W; supp_occ_curr.W];
+    supp_occ.D = [supp_occ.D; supp_occ_curr.D];
+    
+%     X_occ = [X_occ; t_cons; X_occ_curr];
+    Ay = Ay + Ay_curr;
+    
+    %something about absolute continuity
 end
 
 %% Form Constraints and Solve Problem
 
-%supp_con = [Xp; X0; X_occ; W];
-supp_con = [Xp; X0; X_occ; W; D];
+supp_con = [Xp; X0; supp_occ.X; supp_occ.T; ...
+    W; supp_occ.W; supp_occ.D];
+
 %careful of monic substitutions ruining dual variables
 Liou = Ay + (y0 - yp);
-mom_con = [mass(mu0) == 1; Liou == 0];
+mom_con = [mass(mu0) == 1; Liou == 0; abscont];
 
 obj = options.obj;
 if nobj == 1
@@ -707,6 +677,10 @@ for i = 1:nobj
     out.func.cost_all{i} = @(x) (eval(options.obj(i), xp, x));
 end
 
+%evaluation of beta' p(x)
+out.func.cost_beta = @(x) (beta'*cell2mat(cellfun(@(c) c(x), ...
+    out.func.cost_all, 'UniformOutput', false)));
+
 if nobj > 1
     out.func.cost = @(x) min(eval(options.obj, xp, x));
 else
@@ -743,7 +717,8 @@ end
 out.func.nonneg = @(t, x, w, d) ...
                 [out.func.vval(t, x, w) + obj_rec; ...
                 out.func.Lvval(t, x, w, d); ...
-                -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
+                -out.func.vval(t, x, w) - out.func.cost_beta(x)];
+            
 
 out.dynamics.cost = out.func.cost;
 out.dynamics.nonneg = out.func.nonneg;
@@ -751,21 +726,21 @@ out.dynamics.nonneg = out.func.nonneg;
 
 end
 
-function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, degree, discrete)
+function [mu, mon, supp_occ, Ay] = occupation_measure(f, supp, var, var_new, degree, discrete)
 %form the occupation measure
 %Input:
 %   f:        Dynamics (function)
-%   X:        Support set upon which dynamics take place
+%   supp:     Support set upon which dynamics take place (all variables)
 %   var:      variables of problem [t,x,w,d,b]
 %   var_new:  New variables for occupation measure
 %   degree:   Degree of measure
 %   discrete: True (discrete system) or False (continuous system)
 %
 %Output:
-%   mu:     Occupation Measure
-%   mon:    monomoials in Liouville constraint
-%   X:      Support of measure in state
-%   Ay:     Adjoint of lie derivative, Liouville
+%   mu:       Occupation Measure
+%   mon:      monomoials in Liouville constraint
+%   supp_occ: Support of measure in all variables
+%   Ay:       Adjoint of lie derivative, Liouville
 
     %var_all = [var.t; x_occ; var.w];
 
@@ -773,27 +748,34 @@ function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, degree, d
         discrete = 0;
     end
     
-    x_occ = var_new.x;
+    %new support set in the new variables
+    supp_occ = struct('T', [], 'X', [], 'W', [], 'D', []);
     
+    x_occ = var_new.x;    
+    supp_occ.X = subs(supp.X, var.x, x_occ);
+        
     if ~isempty(var_new.t)
         t_occ = var_new.t;
+        supp_occ.T = subs(supp.T, var.t, t_occ);
     else
         t_occ = [];
     end
     
     if ~isempty(var_new.w)
         w_occ = var_new.w;
+        supp_occ.W = subs(supp.W, var.w, w_occ);
     else
         w_occ = [];
     end
     
     if ~isempty(var_new.d)
         d_occ = var_new.d;
+        supp_occ.D = subs(supp.D, var.d, d_occ);
     else
         d_occ = [];
     end
     
-    %box variables?
+    %box variables (var.b) are not used here.
     
     vars_prev = [var.t; var.x; var.w; var.d];
     vars_new = [t_occ; x_occ; w_occ; d_occ];
@@ -811,12 +793,11 @@ function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, degree, d
         if ~isempty(var.t)
             Ay = Ay + mom(diff(mon, t_occ));
         end
-    end
-    X_occ = subs(X, var.x, x_occ);
+    end    
 
 end
 
-function [mu, sigma, sigma_hat, mon, X_occ, Ay, abscont] = occupation_measure_box(f, X, var, var_new, degree)
+function [mu, sigma, sigma_hat, mon, X_occ, Ay, abscont] = occupation_measure_box(f, X, var, var_new, var_box, degree)
 %form the occupation measure when there is control-affine box structure:
 %f = f0 + sumk bk fk where each bk is a time varying disturbance in [0, 1]
 %
@@ -827,6 +808,7 @@ function [mu, sigma, sigma_hat, mon, X_occ, Ay, abscont] = occupation_measure_bo
 %   X:        Support set upon which dynamics take place
 %   var:      variables of problem [t,x,w,d,b]
 %   var_new:  New variables for occupation measure
+%   var_box:  New variables for box-occupation measure
 %   degree:   Degree of measure
 %
 %Output:
@@ -848,13 +830,5 @@ function [mu, sigma, sigma_hat, mon, X_occ, Ay, abscont] = occupation_measure_bo
     [mu, mon, X_occ, Ay] = occupation_measure(f0, X, var, var_new, degree, 0);
 
     
-    
-%     vars_prev = [var.t; var.x; var.w; var.d];
-%     vars_new = [t_occ; x_occ; w_occ; d_occ];
-    
-%     f_occ = subs(f, vars_prev, vars_new);
-%     
-%     mu = meas([t_occ; x_occ; w_occ; d_occ]);
-%     mon = mmon([t_occ; x_occ; w_occ], degree);
-%     
+   
 end

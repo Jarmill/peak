@@ -26,10 +26,10 @@ EQ = 1;
 
 if EQ
     X0 = ((x(1)-C0(1))^2 + (x(2)-C0(2))^2 == R0^2);
-    sampler = @() sphere_sample(1, 2)'*R0 + C0;
+    sampler_x = @() sphere_sample(1, 2)'*R0 + C0;
 else
     X0 = ((x(1)-C0(1))^2 + (x(2)-C0(2))^2 <= R0^2);
-    sampler = @() ball_sample(1, 2)'*R0 + C0;
+    sampler_x = @() ball_sample(1, 2)'*R0 + C0;
 end
 %objective to maximize
 % objective = x(1);
@@ -76,10 +76,18 @@ Nsample = 50;
 % Nsample = 20;
 
 
-out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
+s_opt = sampler_options;
+s_opt.sample.x = sampler_x;
+s_opt.Tmax = Tmax_sim;
+
+out_sim = sampler(out.dynamics, Nsample, s_opt);
+
+% out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
 
 if (out.optimal == 1)
-    out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
+%     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
+    s_opt.sample.x = out.x0;
+    out_sim_peak = sampler(out.dynamics, 1, s_opt);
     nplot = nonneg_plot(out, out_sim, out_sim_peak);
     cplot = cost_plot(out, out_sim, out_sim_peak);
     splot = state_plot_2(out, out_sim, out_sim_peak);

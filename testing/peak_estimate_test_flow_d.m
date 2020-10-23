@@ -15,10 +15,14 @@ mpol('d', 1, 1);
 Xsupp = [];
 
 %dynamics
-f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2) + d];
+%in principle, d is in a box
+dmax = 0.4;
+draw = dmax*(2*d - 1);
+
+f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2) + draw];
 X = [];
 
-dmax = 0.4;
+
 
 %initial set
 %C0 = [1.2; 0];
@@ -40,13 +44,18 @@ p_opt.var.d = d;
 
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
-p_opt.disturb = (d^2 <= dmax^2);
+% p_opt.disturb = (d^2 <= dmax^2);
+p_opt.disturb = (d*(1-d) >= 0);
 
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
 
-%p_opt.Tmax = Tmax_sim;
+
+Tmax_sim = 5;
+p_opt.Tmax = Tmax_sim;
+
+
 
 p_opt.box = 3;
 p_opt.scale = 0;
@@ -68,18 +77,18 @@ x0 = C0;
 
 % mu = 1;
 
-% Nsample = 100;
-Nsample = 50;
+Nsample = 100;
+% Nsample = 50;
 % sampler = @() circle_sample(1)'*R0 + C0;
 
 s_opt = sampler_options;
 s_opt.sample.x = @() circle_sample(1)'*R0 + C0;
 s_opt.sample.d = @() dmax * (2*rand() - 1);
 s_opt.Nd = 1;
-s_opt.Tmax = 5;
+s_opt.Tmax = Tmax_sim;
 
 
-s_opt.mu = 0.25;
+s_opt.mu = 0.5;
 
 out_sim = sampler(out.dynamics, Nsample, s_opt);
 

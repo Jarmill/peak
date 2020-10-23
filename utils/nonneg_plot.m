@@ -82,11 +82,8 @@ if nargin == 3
     end       
     
     if ~out.dynamics.time_indep
-        if ~isempty(out.w)
-            peak_nonneg = out.func.nonneg(out.tp, out.xp, out.w);
-        else
-            peak_nonneg = out.func.nonneg(out.tp, out.xp);
-        end
+        peak_nonneg = out.func.nonneg(out.tp, out.xp, out.w, []);
+
         for k = 1:nplt
             subplot(nplt, 1, k)
             scatter(out.tp(1), peak_nonneg(k), 300, '*b', 'Linewidth', 2, 'HandleVisibility', 'Off')

@@ -26,7 +26,6 @@ for i = 1:Np
     
     if isa(opts.sample.x, 'function_handle')
         x0 = opts.sample.x();      
-        w0 = opts.sample.w();
     else
         %numeric
         %assume that the dimensions of x and w are compatible if arrays are
@@ -34,10 +33,20 @@ for i = 1:Np
         if size(opts.sample.x, 2) == 1
             %single point
             x0 = opts.sample.x;
-            w0 = opts.sample.w;
         else
             %array, so Ns = size(sampler, 2)
             x0 = opts.sample.x(:, i);
+        end
+    end
+    
+    if isa(opts.sample.w, 'function_handle')
+        w0 = opts.sample.w();
+    else        
+        if size(opts.sample.w, 2) == 1
+            %single point            
+            w0 = opts.sample.w;
+        else
+            %array, so Ns = size(sampler, 2)            
             w0 = opts.sample.w(:, i);
         end
     end

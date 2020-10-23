@@ -127,7 +127,11 @@ while time_total < opts.Tmax
     time_total = time_total + time_curr(end);
     
     %time dependent uncertainty
-    d_accum = [d_accum; ones(size(x_curr, 1), 1)* d_curr'];  %general
+    if isempty(d_curr)
+        d_accum = [d_accum; zeros(size(x_curr, 1), 0)];
+    else
+        d_accum = [d_accum; ones(size(x_curr, 1), 1)* d_curr'];  %general
+    end
     b_accum = [b_accum; ones(size(x_curr, 1), 1)* b_curr'];  %box
     system_choice = [system_choice; curr_sys];  %system switching
     time_breaks = [time_breaks; time_total];
