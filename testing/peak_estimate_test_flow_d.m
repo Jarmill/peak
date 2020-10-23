@@ -55,7 +55,7 @@ p_opt.scale = 0;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 6;
+order = 5;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
@@ -68,8 +68,8 @@ x0 = C0;
 
 % mu = 1;
 
-Nsample = 100;
-% Nsample = 50;
+% Nsample = 100;
+Nsample = 50;
 % sampler = @() circle_sample(1)'*R0 + C0;
 
 s_opt = sampler_options;
@@ -79,7 +79,7 @@ s_opt.Nd = 1;
 s_opt.Tmax = 5;
 
 
-s_opt.mu = 0.5;
+s_opt.mu = 0.25;
 
 out_sim = sampler(out.dynamics, Nsample, s_opt);
 

@@ -155,7 +155,7 @@ out_sim.Tmax = opts.Tmax;
 out_sim.cost = dynamics.cost(x_accum');
 %Evaluate (hopefully) nonnegative functions along trajectories
 if isfield(dynamics, 'nonneg')    
-    out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0, d_accum', b_accum');
+    out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0, d_accum');
 %     if opts.Nw > 0
 %         if ~dynamics.time_indep
 %             out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0);

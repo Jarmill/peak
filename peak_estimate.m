@@ -248,6 +248,9 @@ Ay = 0;
 X_occ = []; %support
 
 %% occupation measure
+%box occupation
+
+
 %state
 mpol('x_occ', nx, nsys);
 
@@ -266,18 +269,90 @@ else
 end
 D = [];
 
-%time-dependent box in [0, 1]
-if nb > 0
-    mpol('b_occ', nb, nsys);
-else
-    b_occ = zeros(0, nsys);
+%% Box variables
+
+BOX_VAR = nb > 0 && ~options.dynamics.discrete;
+
+if BOX_VAR
+    tb = cell(nb, 1); %box variables x
+    tc = cell(nb, 1); %complement box variables x
+    
+%     if TIME_INDEP
+%         tb = zeros(0, nsys);
+%         tc = zeros(0, nsys);
+%     else
+    if ~TIME_INDEP
+        for k = 1:nb
+            %define variables
+            mpol(strcat('tb', num2str(k)), 1, nsys);
+            mpol(strcat('tc', num2str(k)), 1, nsys);
+
+            %add variables to cells (janky code but it works)
+            tb{k} = eval(strcat('tb', num2str(k)));
+            tc{k} = eval(strcat('tc', num2str(k)));
+        end
+    end
+    
+    
+    %state variable x
+    xb = cell(nb, 1); %box variables x
+    xc = cell(nb, 1); %complement box variables x
+    for k = 1:nb
+        %define variables
+        mpol(strcat('xb', num2str(k)), nx, nsys);
+        mpol(strcat('xc', num2str(k)), nx, nsys);
+        
+        %add variables to cells (janky code but it works)
+        xb{k} = eval(strcat('xb', num2str(k)));
+        xc{k} = eval(strcat('xc', num2str(k)));
+    end
+    
+    %parameter variable w (time independent)
+    wb = cell(nw, 1); %box variables x
+    wc = cell(nw, 1); %complement box variables x
+    if nw > 0        
+        for k = 1:nb
+            %define variables
+            mpol(strcat('wb', num2str(k)), nw, nsys);
+            mpol(strcat('wc', num2str(k)), nw, nsys);
+
+            %add variables to cells (janky code but it works)
+            wb{k} = eval(strcat('wb', num2str(k)));
+            wc{k} = eval(strcat('wc', num2str(k)));
+        end
+    end
+    
+    
+    %disturbance variable d (time varying)
+    db = cell(dw, 1); %box variables x
+    dc = cell(dw, 1); %complement box variables x
+    if nd > 0        
+        for k = 1:nb
+            %define variables
+            mpol(strcat('db', num2str(k)), nw, nsys);
+            mpol(strcat('dc', num2str(k)), nw, nsys);
+
+            %add variables to cells (janky code but it works)
+            db{k} = eval(strcat('db', num2str(k)));
+            dc{k} = eval(strcat('dc', num2str(k)));
+        end
+    end
+    
+    %package up the variables
+    box_var = cell(nb, 1);
+    for k = 1:nb
+        box_var = struct('tb', tb{k}, 'tc', tc{k}, 'xb', xb{k}, 'xc', xc{k}, ...
+            'wb', wb{k}, 'wc', wc{k}, 'db', db{k}, 'dc', dc{k});
+    end
 end
+
+
 %this will be tricky. deal with it later.
 %involves box control-occupation measures and absolute continuity
 %constraints.
 
 
-%measure information
+%% Form the occupation measures
 if TIME_INDEP           
     mup = meas([xp; wp]);
     tp = [];
@@ -289,13 +364,21 @@ if TIME_INDEP
     mon0 = mmon([x0; w0], degree);
     y0 = mom(mon0);        
     
+    %absolute continuity constraint
+    %in case 
+    abscont = [];
+    
     for i = 1:nsys
         var_new = struct('t', [], 'x', x_occ(:, i), 'w', w_occ(:, i), ...
-            'd', d_occ(:, i), 'b', b_occ(:, i));
+            'd', d_occ(:, i));
         
-        [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
-            X{i}, options.var, var_new, degree, options.dynamics.discrete);
-        
+        if BOX_VAR
+            %control-occupation measures with box variables b in [0, 1]
+            %efficient formulation only valid if system is continuous
+        else        
+            [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
+                X{i}, options.var, var_new, degree, options.dynamics.discrete);
+        end
         %mu_occ_sum = mu_occ_sum + mu_occ{i};
         X_occ = [X_occ; X_occ_curr];
         Ay = Ay + Ay_curr;
@@ -330,8 +413,14 @@ else
         var_new = struct('t', t_occ(i), 'x', x_occ(:, i), 'w', w_occ(:, i),...
             'd', d_occ(:, i), 'b', b_occ(:, i));
         
-        [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(...
-            f{i}, X{i}, options.var, var_new, degree, 0);
+        %TODO: finish this part
+        if BOX_VAR
+            %control-occupation measures with box variables b in [0, 1]
+            %efficient formulation only valid if system is continuous
+        else        
+            [mu_occ{i}, mon_occ{i}, X_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
+                X{i}, options.var, var_new, degree, options.dynamics.discrete);
+        end
         
         %support the valid time range
         Tmin_curr = options.dynamics.Tmin(i);
@@ -655,35 +744,6 @@ out.func.nonneg = @(t, x, w, d) ...
                 [out.func.vval(t, x, w) + obj_rec; ...
                 out.func.Lvval(t, x, w, d); ...
                 -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
-% if nw > 0
-%     if TIME_INDEP    
-%         out.func.vval = @(x, w) eval(v, [xp; wp], [x; w*ones(1, size(x, 2))]);    %dual v(t,x,w)
-%         out.func.Lvval = @(x, w) eval(Lv, [xp; wp], [x; w*ones(1, size(x, 2))]);  %Lie derivative Lv(t,x,w)
-%         
-%         out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w); -out.func.vval(x, w) - beta'*out.func.cost(x)];
-% %         out.func.nonneg = @(x, w) [out.func.vval(x, w) + obj_rec; out.func.Lvval(x, w).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x, w) - beta'*out.func.cost(x)];
-%     else
-%         out.func.vval = @(t, x, w) eval(v, [tp; xp; wp], [t; x; w*ones(1, size(x, 2))]);   %dual v(t,x,w)
-%         out.func.Lvval = @(t, x, w) eval(Lv, [tp; xp; wp],  [t; x; w*ones(1, size(x, 2))]);   %Lie derivative Lv(t,x,w)
-%         
-%         out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
-% %         out.func.nonneg = @(t, x, w) [out.func.vval(t, x, w) + obj_rec; out.func.Lvval(t, x, w).*event_all(t, x); -out.func.vval(t, x, w) - beta'*out.func.cost(x)];
-%     end
-% 
-% else
-%     if TIME_INDEP    
-%         out.func.vval = @(x) eval(v, xp, x);    %dual v(t,x,w)
-%         out.func.Lvval = @(x) eval(Lv, xp, x);   %Lie derivative Lv(t,x,w)
-% 
-%         out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x); -out.func.vval(x) - out.func.cost(x)];
-% %         out.func.nonneg = @(x) [out.func.vval(x) + obj_rec; out.func.Lvval(x).*event_all(zeros(1, size(x, 2)),x); -out.func.vval(x) - out.func.cost(x)];
-%     else
-%         out.func.vval = @(t, x) eval(v, [tp; xp], [t; x]);    %dual v(t,x,w)
-%         out.func.Lvval = @(t, x) eval(Lv, [tp; xp], [t; x]);   %Lie derivative Lv(t,x,w)
-%         out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x); -out.func.vval(t, x) - out.func.cost(x)];
-% %         out.func.nonneg = @(t, x) [out.func.vval(t, x) + obj_rec; out.func.Lvval(t, x).*event_all(t, x); -out.func.vval(t, x) - out.func.cost(x)];
-%     end
-% end
 
 out.dynamics.cost = out.func.cost;
 out.dynamics.nonneg = out.func.nonneg;
@@ -756,3 +816,45 @@ function [mu, mon, X_occ, Ay] = occupation_measure(f, X, var, var_new, degree, d
 
 end
 
+function [mu, sigma, sigma_hat, mon, X_occ, Ay, abscont] = occupation_measure_box(f, X, var, var_new, degree)
+%form the occupation measure when there is control-affine box structure:
+%f = f0 + sumk bk fk where each bk is a time varying disturbance in [0, 1]
+%
+%assumptions: length(var.b) > 0 (nontrivial box dynamics)
+%             continuous system (discrete does not decompose, pushforward)
+%Input:
+%   f:        Dynamics (function)
+%   X:        Support set upon which dynamics take place
+%   var:      variables of problem [t,x,w,d,b]
+%   var_new:  New variables for occupation measure
+%   degree:   Degree of measure
+%
+%Output:
+%   mu:         occupation measure (standard)
+%   sigma:      box-occupation measure
+%   sigma_hat:  complement of box-occupation measure
+%   mon:        monomoials in Liouville constraint
+%   X:          Support of measure in state
+%   Ay:         Adjoint of lie derivative, Liouville (moment constraint)
+%   abscont:    Absolute continuity constraint (moment constraint)
+
+    %new measures
+    Nb = length(var.b);
+    sigma = cell(Nb, 1);
+    sigma_c = cell(Nb, 1);
+        
+    f0 = subs(f, var.b, zeros(length(var.b), 1));
+    
+    [mu, mon, X_occ, Ay] = occupation_measure(f0, X, var, var_new, degree, 0);
+
+    
+    
+%     vars_prev = [var.t; var.x; var.w; var.d];
+%     vars_new = [t_occ; x_occ; w_occ; d_occ];
+    
+%     f_occ = subs(f, vars_prev, vars_new);
+%     
+%     mu = meas([t_occ; x_occ; w_occ; d_occ]);
+%     mon = mmon([t_occ; x_occ; w_occ], degree);
+%     
+end
