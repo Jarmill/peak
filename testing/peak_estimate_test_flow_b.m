@@ -9,7 +9,7 @@ rng(300, 'twister')
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
 mpol('x', 2, 1);
-mpol('d', 1, 1);
+mpol('b', 1, 1);
 
 %support
 Xsupp = [];
@@ -17,7 +17,7 @@ Xsupp = [];
 %dynamics
 %in principle, d is in a box
 dmax = 0.4;
-draw = dmax*(2*d - 1);
+draw = dmax*(2*b - 1);
 
 f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2) + draw];
 X = [];
@@ -40,22 +40,17 @@ objective = -x(2);
 %
 p_opt = peak_options;
 p_opt.var.x = x;
-p_opt.var.d = d;
+p_opt.var.b = b;
 
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
-% p_opt.disturb = (d^2 <= dmax^2);
-p_opt.disturb = (d*(1-d) >= 0);
 
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
 
-
 Tmax_sim = 5;
 % p_opt.Tmax = Tmax_sim;
-
-
 
 p_opt.box = 3;
 p_opt.scale = 0;
@@ -77,8 +72,8 @@ x0 = C0;
 
 % mu = 1;
 
-% Nsample = 100;
-Nsample = 50;
+Nsample = 100;
+% Nsample = 50;
 % sampler = @() circle_sample(1)'*R0 + C0;
 
 s_opt = sampler_options;
@@ -101,7 +96,7 @@ out_sim = sampler(out.dynamics, Nsample, s_opt);
 %     splot = state_plot_2(out, out_sim, out_sim_peak);
 %     %     splot = state_plot_N(out, out_sim, out_sim_peak);
 % else
-    nplot = nonneg_plot(out, out_sim);
-%     splot = state_plot_2(out, out_sim);
+%     nplot = nonneg_plot(out, out_sim);
+    splot = state_plot_2(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
 % end

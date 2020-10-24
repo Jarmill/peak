@@ -92,19 +92,11 @@ while time_total < opts.Tmax
     curr_sys = possible_sys(curr_sys_ind);
     d_curr = opts.sample.d();
     b_curr = rand(opts.Nb, 1);
-            
-%     if opts.Nw > 0
-        %includes uncertain fixed parameters
-%         curr_f = @(t, x) dynamics.f{curr_sys}(t, x, w0);\
-        curr_f = @(t, x) dynamics.f_all{curr_sys}(t, x, w0, d_curr, b_curr);
-        %currently w is not supported in event function. change this
-        curr_event = @(t, x) dynamics.event{curr_sys}(t + time_total, x);
-%     else
-        %no uncertain fixed parameters
-%         curr_f = dynamics.f{curr_sys};
-%         curr_event = @(t, x) dynamics.event{curr_sys}(t + time_total, x);
-%     end
     
+    curr_f = @(t, x) dynamics.f{curr_sys}(t, x, w0, d_curr, b_curr);
+    %currently w is not supported in event function. change this
+    curr_event = @(t, x, w) dynamics.event{curr_sys}(t + time_total, x);
+
 
     
     time_track_trunc = min(time_track, opts.Tmax - time_total);
