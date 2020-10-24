@@ -94,14 +94,16 @@ out_sim = sampler(out.dynamics, Nsample, s_opt);
 
 % out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
 
-% if (out.optimal == 1)
+if (out.optimal == 1)
+    s_opt.sample.x = out.x0;
+    out_sim_peak = sampler(out.dynamics, 1, s_opt);
 %     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
-%     nplot = nonneg_plot(out_sim, out_sim_peak);
+    nplot = nonneg_plot(out, out_sim, out_sim_peak);
 % 
-%     splot = state_plot_2(out, out_sim, out_sim_peak);
-%     %     splot = state_plot_N(out, out_sim, out_sim_peak);
-% else
+    splot = state_plot_2(out, out_sim, out_sim_peak);
+    %     splot = state_plot_N(out, out_sim, out_sim_peak);
+else
     nplot = nonneg_plot(out, out_sim);
 %     splot = state_plot_2(out, out_sim);
-%     splot = state_plot_N(out, out_sim);
+    splot = state_plot_N(out, out_sim);
 % end

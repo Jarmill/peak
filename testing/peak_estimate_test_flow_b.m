@@ -97,6 +97,6 @@ out_sim = sampler(out.dynamics, Nsample, s_opt);
 %     %     splot = state_plot_N(out, out_sim, out_sim_peak);
 % else
 %     nplot = nonneg_plot(out, out_sim);
-    splot = state_plot_2(out, out_sim);
-%     splot = state_plot_N(out, out_sim);
+%     splot = state_plot_2(out, out_sim);
+    splot = state_plot_N(out, out_sim);
 % end
