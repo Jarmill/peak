@@ -26,10 +26,6 @@ function [out_sim] = sampler_cont(dynamics, x0, w0, opts)
 %       break_sys:  active system in time break
 %       break_time: time breaks for system
 
-
-
-
-
 %gather information about the system
 
 %time range of states
@@ -122,7 +118,8 @@ while time_total < opts.Tmax
     if isempty(d_curr)
         d_accum = [d_accum; zeros(size(x_curr, 1), 0)];
     else
-        d_accum = [d_accum; ones(size(x_curr, 1), 1)* d_curr'];  %general
+%         d_accum = [d_accum; ones(size(x_curr, 1), 1)* d_curr'];  %general
+        d_accum = [d_accum; d_curr'];  %general
     end
     b_accum = [b_accum; ones(size(x_curr, 1), 1)* b_curr'];  %box
     system_choice = [system_choice; curr_sys];  %system switching
@@ -152,19 +149,6 @@ out_sim.cost = dynamics.cost(x_accum');
 %Evaluate (hopefully) nonnegative functions along trajectories
 if isfield(dynamics, 'nonneg')    
     out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0, d_accum');
-%     if opts.Nw > 0
-%         if ~dynamics.time_indep
-%             out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0);
-%         else
-%             out_sim.nonneg = dynamics.nonneg(x_accum', w0);
-%         end
-%     else
-%         if ~dynamics.time_indep
-%             out_sim.nonneg = dynamics.nonneg(time_accum', x_accum');
-%         else
-%             out_sim.nonneg = dynamics.nonneg(x_accum');
-%         end
-%     end
 end
 
 end

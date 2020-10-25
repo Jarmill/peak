@@ -853,6 +853,7 @@ function [mu, mon, supp_occ, Ay] = occupation_measure(f, supp, var, var_new, deg
     
     vars_prev = [var.t; var.x; var.w; var.d];
     vars_new = [t_occ; x_occ; w_occ; d_occ];
+    vars_sub = [t_occ; x_occ; w_occ];
     
     f_occ = subs(f, vars_prev, vars_new);
     
@@ -860,7 +861,7 @@ function [mu, mon, supp_occ, Ay] = occupation_measure(f, supp, var, var_new, deg
     mon = mmon([t_occ; x_occ; w_occ], degree);
     
     if discrete
-        pushforward = subs(mon, vars_new, [f_occ; w_occ]);
+        pushforward = subs(mon, vars_sub, [f_occ; w_occ]);
         Ay = mom(pushforward - mon);
     else
         Ay = mom(diff(mon, x_occ)*f_occ);

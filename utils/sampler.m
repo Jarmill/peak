@@ -23,7 +23,7 @@ function [out_sim] = sampler(dynamics, Np, opts)
 out_sim = cell(Np, 1);
 
 parfor i = 1:Np
-    
+% for i = 1:Np
     if isa(opts.sample.x, 'function_handle')
         x0 = opts.sample.x();      
     else
@@ -52,14 +52,14 @@ parfor i = 1:Np
     end
 
     %do discrete later
-    out_sim{i} = sampler_cont(dynamics, x0, w0, opts);
+    
     
     %old code
-%     if dynamics.discrete
-%         out_sim{i} = switch_sim_discrete(dynamics, x0, Tmax, Nw);    
-%     else
-%         out_sim{i} = switch_sim(dynamics, x0, Tmax, mu, Nw, odefcn);
-%     end
+    if dynamics.discrete
+        out_sim{i} = sampler_discrete(dynamics, x0, w0, opts);
+    else
+        out_sim{i} = sampler_cont(dynamics, x0, w0, opts);
+    end
 end
 
 end

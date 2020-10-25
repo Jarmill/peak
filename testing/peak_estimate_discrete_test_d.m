@@ -15,6 +15,10 @@ mset clear
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
 mpol('x', 2, 1);
+mpol('d', 1, 1);
+
+dmax = 0.4;
+draw = dmax*(2*d - 1);
 
 %support
 Xsupp = [];
@@ -26,7 +30,7 @@ rng(40, 'twister')
 [U, S, V] = svd(randn(2));
 Snew = diag([0.95, 0.8]);
 A = U* Snew * V';
-f1 = [A*x];
+f1 = [A*x] + [0; draw];
 % f1 = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 
 X1 = [];
@@ -60,9 +64,11 @@ objective = -x(2);
 %
 p_opt = peak_options;
 p_opt.var.x = x;
+p_opt.var.d = d;
 
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
+p_opt.disturb = (d*(1-d) >= 0);
 
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
@@ -81,7 +87,7 @@ p_opt.scale = 0;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 4;
+order = 3;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
@@ -99,8 +105,8 @@ Nsample = 100;
 % Nsample = 20;
 s_opt = sampler_options;
 s_opt.sample.x = @() sphere_sample(1, 2)'*R0 + C0;
-% s_opt.sample.d = @() dmax * (2*rand() - 1);
-% s_opt.Nd = 1;
+s_opt.sample.d = @() dmax * (2*rand() - 1);
+s_opt.Nd = 1;
 s_opt.Tmax = Tmax_sim;
 
 out_sim = sampler(out.dynamics, Nsample, s_opt);
