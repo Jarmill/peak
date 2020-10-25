@@ -17,15 +17,19 @@ for r = 1:nr
  end
 end
 
-% Sort and remove duplicate variable indices
-v = sort(v);
-d = [v 0]-[0 v];
-d = d(2:end-1);
-i = 2:length(v);
-v = v([1 i(d>0)]);
+% I dont want this to be sorted
+%
+% % Sort and remove duplicate variable indices
+% v = sort(v);
+% d = [v 0]-[0 v];
+% d = d(2:end-1);
+% i = 2:length(v);
+% v = v([1 i(d>0)]);
+% 
+% % Remove zero variable index
+% if (length(v) > 1) & (v(1) == 0)
+%  v = v(2:end);
+% end
 
-% Remove zero variable index
-if (length(v) > 1) & (v(1) == 0)
- v = v(2:end);
 end
 

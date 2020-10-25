@@ -11,9 +11,7 @@ TIME_VARYING = 1;
 %define variables
 %gloptipoly is sensitive to the order in which variables are declared when
 %defining a measure
-if TIME_VARYING 
-    mpol('t', 1, 1);
-end
+
 
 mpol('x', 2, 1);
 mpol('b', 1, 1);
@@ -23,8 +21,8 @@ Xsupp = [];
 
 %dynamics
 %in principle, d is in a box
-% dmax = 0.5;
-dmax = 0.4;
+dmax = 0.5;
+% dmax = 0.4;
 % dmax = 0.3;
 % dmax = 0.2;
 draw = dmax.*(2.*b - 1);
@@ -54,10 +52,6 @@ p_opt = peak_options;
 p_opt.var.x = x;
 p_opt.var.b = b;
 
-if TIME_VARYING
-    p_opt.var.t = t;
-end
-
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
 
@@ -78,7 +72,7 @@ p_opt.scale = 0;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 5;
+order = 4;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
