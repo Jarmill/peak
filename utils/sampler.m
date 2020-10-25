@@ -22,7 +22,7 @@ function [out_sim] = sampler(dynamics, Np, opts)
 
 out_sim = cell(Np, 1);
 
-for i = 1:Np
+parfor i = 1:Np
     
     if isa(opts.sample.x, 'function_handle')
         x0 = opts.sample.x();      

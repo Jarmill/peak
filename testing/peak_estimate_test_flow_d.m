@@ -8,6 +8,8 @@ rng(300, 'twister')
 
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
+
+
 mpol('x', 2, 1);
 mpol('d', 1, 1);
 
@@ -19,7 +21,7 @@ Xsupp = [];
 dmax = 0.4;
 draw = dmax*(2*d - 1);
 
-f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2) + draw];
+f = [x(2); -x(1) - x(2) + (1/3).* x(1).^3 + draw];
 X = [];
 
 
@@ -57,14 +59,15 @@ Tmax_sim = 5;
 
 
 
-p_opt.box = 3;
+% p_opt.box = 3;
+p_opt.box = [-1, 3; -1.5, 2];
 p_opt.scale = 0;
 
 
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 3;
+order = 5;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
@@ -77,18 +80,18 @@ x0 = C0;
 
 % mu = 1;
 
-% Nsample = 100;
-Nsample = 50;
+Nsample = 100;
+% Nsample = 50;
 % sampler = @() circle_sample(1)'*R0 + C0;
 
 s_opt = sampler_options;
-s_opt.sample.x = @() circle_sample(1)'*R0 + C0;
+s_opt.sample.x = @() sphere_sample(1, 2)'*R0 + C0;
 s_opt.sample.d = @() dmax * (2*rand() - 1);
 s_opt.Nd = 1;
 s_opt.Tmax = Tmax_sim;
 
 
-s_opt.mu = 0.5;
+s_opt.mu = 0.4;
 
 out_sim = sampler(out.dynamics, Nsample, s_opt);
 
@@ -104,6 +107,6 @@ if (out.optimal == 1)
     %     splot = state_plot_N(out, out_sim, out_sim_peak);
 else
     nplot = nonneg_plot(out, out_sim);
-%     splot = state_plot_2(out, out_sim);
-    splot = state_plot_N(out, out_sim);
-% end
+    splot = state_plot_2(out, out_sim);
+%     splot = state_plot_N(out, out_sim);
+end

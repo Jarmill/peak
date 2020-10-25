@@ -57,13 +57,40 @@ if nargin < 2
     order = 3;
 end
 degree = 2*order;
+nvar = 0;
 
 %% Process option data structure
 mset clearmeas
 
+%continuous or discrete
+if ~isfield(options.dynamics, 'discrete')
+    options.dynamics.discrete = 0;
+end
+
+%time range of all trajectories
+if options.Tmax == Inf || options.dynamics.discrete
+    TIME_INDEP = 1;    
+    Tsupp = [];
+    tp = [];
+else    
+    TIME_INDEP = 0;    
+    
+    if isempty(options.var.t)
+        mpol('t', 1, 1)
+        tp = t;
+        options.var.t = tp;
+    else
+        tp = options.var.t;
+    end
+    nvar = nvar + 1;
+    
+    Tsupp = tp*(1-tp) >= 0;
+
+end
+
 %state variable
 nx = length(options.var.x);
-nvar = nx;
+nvar = nvar + nx;
 
 %parameter variables
 nw = length(options.var.w);
@@ -114,9 +141,7 @@ end
 f = options.dynamics.f;
 X = options.dynamics.X;
 
-if ~isfield(options.dynamics, 'discrete')
-    options.dynamics.discrete = 0;
-end
+
 
 if iscell(options.dynamics.f)
     nsys = length(options.dynamics.f);
@@ -135,26 +160,7 @@ if ~isfield(options.dynamics, 'Tmin') || isempty(options.dynamics.Tmin)
 end
 
 
-%time range of all trajectories
-if options.Tmax == Inf || options.dynamics.discrete
-    TIME_INDEP = 1;    
-    Tsupp = [];
-    tp = [];
-else    
-    TIME_INDEP = 0;    
-    
-    if isempty(options.var.t)
-        mpol('t', 1, 1)
-        tp = t;
-        options.var.t = tp;
-    else
-        tp = options.var.t;
-    end
-    nvar = nvar + 1;
-    
-    Tsupp = tp*(1-tp) >= 0;
 
-end
 
 
 
@@ -189,7 +195,7 @@ nobj = length(options.obj);
 
 if options.scale
 %     Xp = [subs(options.state_supp, xp, xp_scale); Xsupp; XR];
-    Xp = [Tsupp; subs(options.state_supp, xp, xp_scale); XR]; %that might be the bug (hopefully)
+    Xp = [subs(options.state_supp, xp, xp_scale); XR]; %that might be the bug (hopefully)
 else
     
     %this is where dual_rec breaks
@@ -198,12 +204,20 @@ else
     %dual_rec'monomials. Since X0 and X_occ are constrained within Xsupp,
     %this should not be a problem. If dynamics stay within Xsupp, then Xp
     %should be supported in Xsupp at optimality.
-    Xp = [Tsupp; Xsupp; XR];
+    Xp = [Xsupp; XR];
 end
 %deal with hanging variables and measures by letting the original x be the
 %peak measure
 
 %replace with time breaks
+if TIME_INDEP
+    t0 = [];
+    T0 = [];
+else
+    mpol('t0', 1, 1);
+    T0 = [t0 == 0];
+end
+
 mpol('x0', nx, 1);
 
 if options.scale
@@ -236,12 +250,7 @@ else
     w0 = [];
 end
 
-if TIME_INDEP
-    t0 = [];
-else
-    mpol('t0', 1, 1);
-    X0 = [t0 == 0; X0];
-end
+
 
 %% Initial and Peak Measures
 
@@ -267,9 +276,6 @@ X_occ = []; %support
 
 %% occupation measure variables
 
-%state
-mpol('x_occ', nx, nsys);
-
 %time
 if TIME_INDEP
     t_occ = zeros(0, nsys);
@@ -277,6 +283,8 @@ else
     mpol('t_occ', 1, nsys);
 end
 
+%state
+mpol('x_occ', nx, nsys);
 
 %time-independent parameter
 if nw > 0
@@ -305,18 +313,6 @@ BOX_VAR = nb > 0 && ~options.dynamics.discrete;
 %   xb{i}  = mpol('xb',nx, nb)
 
 if BOX_VAR       
-    %state variable x
-    xb = cell(nsys, 1); %box variables x
-    xc = cell(nsys, 1); %complement box variables x
-    for i = 1:nsys
-        %define variables
-        mpol(strcat('xb', num2str(i)), nx, nb);
-        mpol(strcat('xc', num2str(i)), nx, nb);
-        
-        %add variables to cells (janky code but it works)
-        xb{i} = eval(strcat('xb', num2str(i)));
-        xc{i} = eval(strcat('xc', num2str(i)));
-    end
     
     %time variable t
     tb = cell(nsys, 1); %box variables x
@@ -332,6 +328,19 @@ if BOX_VAR
             tc{i} = eval(strcat('tc', num2str(i)));
         end
     end
+    
+    %state variable x
+    xb = cell(nsys, 1); %box variables x
+    xc = cell(nsys, 1); %complement box variables x
+    for i = 1:nsys
+        %define variables
+        mpol(strcat('xb', num2str(i)), nx, nb);
+        mpol(strcat('xc', num2str(i)), nx, nb);
+        
+        %add variables to cells (janky code but it works)
+        xb{i} = eval(strcat('xb', num2str(i)));
+        xc{i} = eval(strcat('xc', num2str(i)));
+    end   
     
     
     %parameter variable w (time independent)
@@ -372,7 +381,7 @@ if BOX_VAR
             'wb', wb{i}, 'wc', wc{i}, 'db', db{i}, 'dc', dc{i});
     end
     
-    sigma = cell(nsys, 1);    
+    sigma_b = cell(nsys, 1);    
     sigma_c = cell(nsys, 1);    
 end
 
@@ -411,7 +420,7 @@ abscont = [];
     if BOX_VAR
         %control-occupation measures with box variables b in [0, 1]
         %efficient formulation only valid if system is continuous
-        [mu_occ{i}, mon_occ{i}, supp_occ_curr, Ay_curr, sigma{i}, sigma_c{i}, supp_box_curr, abscont_curr] ...
+        [mu_occ{i}, mon_occ{i}, supp_occ_curr, Ay_curr, sigma_b{i}, sigma_c{i}, supp_box_curr, abscont_curr] ...
             = occupation_measure_box(f{i}, supp_curr, options.var, var_new, box_var{i}, degree);
         
         %append absolute continuity constraint
@@ -440,9 +449,9 @@ end
 
 %% Form Constraints and Solve Problem
 
-supp_con = [Xp; X0; supp_occ.X; supp_occ.T; ...
+supp_con = [T0; Tsupp; Xp; X0; supp_occ.T; supp_occ.X;  ...
     W; supp_occ.W; supp_occ.D; ...
-    supp_box.X; supp_box.T; supp_box.W; supp_box.D];
+    supp_box.T; supp_box.X; supp_box.W; supp_box.D];
 
 %careful of monic substitutions ruining dual variables
 Liou = Ay + (y0 - yp);
@@ -489,7 +498,7 @@ else
         
     end 
     
-    mom_con = [cost_mom_con; mom_con];
+    mom_con = [mom_con; cost_mom_con];
 end
 
 
@@ -554,10 +563,12 @@ end
 %with equality constraints, dual_rec is bigger than just v
 %find the ordering of dual_rec, and which entries correspond to v
 %v = dual_rec'*monp_unscale;
-dual_rec_v = dual_rec{1};
+dual_rec_1 = dual_rec{1};
 % dual_rec_v = dual_rec_v((end - length(monp_unscale)+1):end);
 
-dual_rec_v = dual_rec_v(1:length(monp_unscale));
+n_mon = length(monp_unscale);
+
+dual_rec_v = dual_rec_1(1:n_mon);
 
 if nobj == 1
     beta = 1;
@@ -571,20 +582,67 @@ else
 end
 
 v = dual_rec_v'*monp_unscale;
-Lv = [];
-for i = 1:nsys
-    if options.dynamics.discrete
-        %discrete time
-        pushforward = subs(v, xp, options.dynamics.f{i});
-        Lv_curr = pushforward - v;
-    else
-        %continuous time
-        Lv_curr = diff(v, xp)*options.dynamics.f{i};
+if BOX_VAR
+    %check with equality constraints of support. There may be some extra
+    %dual variables.
+    
+    %multiplier functions zeta indexed by [box var, subsystem]
+    dual_rec_zeta = reshape(dual_rec_1(n_mon + (1:n_mon*nb*nsys)), ...
+                            [n_mon, nb, nsys]);
+    mon_z = mmon([tp; xp; wp; options.var.d], degree);
+    zeta = zeros(nb, nsys)*xp(1); %allocate mpol array
+    zeta_sum = zeros(nb, nsys)*xp(1);
+    
+    %compute Lie derivatives
+    Lv =  zeros(1, nsys)*xp(1);
+    Lgv = zeros(nb, nsys)*xp(1);
+    I = eye(nb);
+    for i = 1:nsys
+        fi = options.dynamics.f{i};
+        
+        %base lie derivative (no disturbance)
+        fi0 = subs(fi, options.var.b, zeros(nb, 1));
+        
+        Lv(i) = diff(v, xp)*fi0;
         if ~TIME_INDEP
-            Lv_curr = Lv_curr + diff(v, tp);
+            Lv(i) = Lv(i) + diff(v, tp);
+        end
+        
+        %box lie derivative (for each box input channel)
+        for k = 1:nb
+            zeta(k, i) = dual_rec_zeta(:, k, i)'*mon_z;
+            zeta_sum(i) = zeta_sum(i) + zeta(k, i);
+            
+            fik = subs(fi, options.var.b, I(k, :)) - fi0;
+            
+            Lgv(i, k) = diff(v, xp) * fik;                        
         end
     end
-    Lv = [Lv; Lv_curr];
+    
+    %formulate polynomials that should be nonnegative
+    mu_con = (Lv - zeta_sum)';
+    sigma_con = reshape(Lgv + zeta, [], 1);
+    sigmac_con = reshape(zeta, [], 1);
+    
+    boxcon = [mu_con; sigma_con; sigmac_con];       
+else
+    Lv = [];
+    for i = 1:nsys
+        if options.dynamics.discrete
+            %discrete time
+            pushforward = subs(v, xp, options.dynamics.f{i});
+            Lv_curr = pushforward - v;
+        else
+            %continuous time
+            Lv_curr = diff(v, xp)*options.dynamics.f{i};
+            if ~TIME_INDEP
+                Lv_curr = Lv_curr + diff(v, tp);
+            end
+        end
+        Lv = [Lv; Lv_curr];
+    end
+
+
 end
 
 
@@ -601,18 +659,21 @@ out.peak_val = obj_rec;
 out.optimal = (rank0 == 1) && (rankp == 1);
 out.x0 = x0_rec;
 out.xp = xp_rec;
-% out.M0 = M0_1;
-% out.Mp = Mp_1;
 
 %moment matrices
 out.M0 = M0;
 out.Mp = Mp;
 
 %occupation measure
-Mocc_cell=cellfun(@(m) double(mmat(m)), mu_occ, 'UniformOutput', false);
-out.Mocc = Mocc_cell;
+out.Mocc=cellfun(@(m) double(mmat(m)), mu_occ, 'UniformOutput', false);
 
-%TODO: control occupation measures sigma, sigma_c
+%box occupation measures
+if BOX_VAR
+    %vertcat(cell{:}) flattens the nested cell array
+    out.Mbox =cellfun(@(m) double(mmat(m)), vertcat(sigma_b{:}), 'UniformOutput', false);
+    out.Mboxc =cellfun(@(m) double(mmat(m)), vertcat(sigma_c{:}), 'UniformOutput', false);
+end
+
 
 %objective
 if nobj > 1
@@ -631,7 +692,7 @@ end
 
 out.var = struct('t', tp, 'x', xp, 'w', wp, 'd', options.var.d);
 
-
+%% Dynamics and Event functions
 %Functions for evaluating system dynamics
 out.func.fval = cell(nsys, 1);  %dynamics
 out.func.fval_all = cell(nsys, 1);  %dynamics
@@ -668,14 +729,20 @@ out.dynamics.f = out.func.fval;
 out.dynamics.event = out.func.event;
 out.dynamics.discrete = options.dynamics.discrete;
 out.dynamics.time_indep = TIME_INDEP;
-event_all = @(tt, xt) cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'UniformOutput', false));
+% event_all = @(tt, xt) cell2mat(cellfun(@(ex) ex(tt, xt), out.func.event, 'UniformOutput', false));
 
-%% functions and dual variables
+%% Dual variable functions (value, nonnegativity)
 out.func = struct;
 out.func.dual_rec = dual_rec;
 out.func.v = v;
 out.func.beta = beta;
-out.func.Lv = Lv;
+if BOX_VAR
+    out.func.Lv = Lv;
+    out.func.Lgv = Lgv;
+    out.func.zeta = zeta;    
+else
+    out.func.Lv = Lv;
+end
 
 %functions that should be nonnegative along valid trajectories
 out.func.cost_all = cell(nobj, 1);
@@ -693,14 +760,6 @@ else
     out.func.cost = @(x) (eval(options.obj, xp, x));
 end
 
-% if TIME_INDEP
-%     fval_curr_all = @(t, x, w, d, b) eval(options.dynamics.f{i}, ...
-%         [xp; wp; options.var.d; options.var.b], [x; w; d; b]);
-% else
-%     fval_curr_all = @(t,x, w, d, b) eval(options.dynamics.f{i}, ...
-%         [tp; xp; wp; options.var.d; options.var.b], [t; x; w; d; b]);
-% end
-
 %simplify this abomination with [t;x;w;d]?
 if TIME_INDEP
    out.func.vval = @(t, x, w) eval(v, [xp; wp], [x; repmat(w,size(x, 2))]);    %dual v(t,x,w)
@@ -711,14 +770,30 @@ else
    out.func.Lvval = @(t, x, w, d) eval(Lv, ...
        [tp; xp; wp; options.var.d],  [t; x; repmat(w,size(x, 2)); d]);
 end
+if BOX_VAR
+    if TIME_INDEP
+       out.func.boxcon = @(t, x, w, d) eval(boxcon, ...
+           [xp; wp; options.var.d],  [x; repmat(w,size(x, 2)); d]);
+    else           
+       out.func.boxcon=   @(t, x, w, d) eval(boxcon, ...
+           [tp; xp; wp; options.var.d],  [t; x; repmat(w,size(x, 2)); d]);
+    end
+end
 
 %TODO: add functionality for b (zeta)
-out.func.nonneg = @(t, x, w, d) ...
-                [out.func.vval(t, x, w) + obj_rec; ...
-                out.func.Lvval(t, x, w, d); ...
-                -out.func.vval(t, x, w) - out.func.cost_beta(x)];
-            
+if BOX_VAR
+    out.func.nonneg = @(t, x, w, d) ...
+                    [out.func.vval(t, x, w) + obj_rec; ...                                        
+                    out.func.boxcon(t, x, w, d); ...
+                    -out.func.vval(t, x, w) - out.func.cost_beta(x)];
+else
+    out.func.nonneg = @(t, x, w, d) ...
+                    [out.func.vval(t, x, w) + obj_rec; ...
+                    out.func.Lvval(t, x, w, d); ...
+                    -out.func.vval(t, x, w) - out.func.cost_beta(x)];
+end        
 
+            
 out.dynamics.cost = out.func.cost;
 out.dynamics.nonneg = out.func.nonneg;
 %% Done!
@@ -884,8 +959,8 @@ function [mu, mon_occ, supp_occ, Ay, sigma, sigma_c, supp_box, abscont] = ...
             dck = [];
         end
         
-        var_b = [xbk; tbk; wbk; dbk];
-        var_c = [xck; tck; wck; dck];
+        var_b = [tbk; xbk; wbk; dbk];
+        var_c = [tck; xck; wck; dck];
         
         sigma{k}  = meas(var_b);    %disturbance occupation
         sigma_c{k} = meas(var_c);   %complement of disturbance occupation

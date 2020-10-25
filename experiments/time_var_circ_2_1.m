@@ -8,8 +8,8 @@ rng(300, 'twister')
 
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
-mpol('x', 2, 1);
 mpol('t', 1, 1);
+mpol('x', 2, 1);
 %support
 Xsupp = [];
 

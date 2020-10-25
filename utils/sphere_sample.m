@@ -1,6 +1,13 @@
 function [X] = sphere_sample(N, d)
 %BALL_SAMPLE Randomly sample a point from a unit d-dimensional sphere
 %3d sphere is a 2-sphere. S^(d-1)
+%
+%Input:
+%   N:  Number of points to sample
+%   d:  Dimension of sphere
+%
+%Output:
+%   X:  Points on sphere
 
 %dropped coordinate method
 U = randn(N, d);
