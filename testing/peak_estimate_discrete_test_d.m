@@ -17,7 +17,8 @@ mset clear
 mpol('x', 2, 1);
 mpol('d', 1, 1);
 
-dmax = 0.4;
+dmax = 0.2;
+
 draw = dmax*(2*d - 1);
 
 %support
@@ -30,19 +31,19 @@ rng(40, 'twister')
 [U, S, V] = svd(randn(2));
 Snew = diag([0.95, 0.8]);
 A = U* Snew * V';
-f1 = [A*x] + [0; draw];
+% f1 = [A*x] + [0; draw];
 % f1 = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
 
 X1 = [];
 
-f2 = [0.8 0.5; -0.5 0.8]*x;
+f2 = [0.8 0.5; -0.5 0.8]*x + [0; draw];
 X2 = [];
 
-% f = f1;
-% X = X1;
+f = f2;
+X = X2;
 
-f = {f1, f2};
-X = {X1, X2};
+% f = {f1, f2};
+% X = {X1, X2};
 
 
 %initial set
@@ -111,17 +112,17 @@ s_opt.Tmax = Tmax_sim;
 
 out_sim = sampler(out.dynamics, Nsample, s_opt);
 
-if (out.optimal == 1)
-    s_opt.sample.x = out.x0;
-    out_sim_peak = sampler(out.dynamics, 1, s_opt);
-    nplot = nonneg_plot(out, out_sim, out_sim_peak);
-    cplot = cost_plot(out, out_sim, out_sim_peak);
-    splot = state_plot_2(out, out_sim, out_sim_peak);
-    %     splot = state_plot_N(out, out_sim, out_sim_peak);
-else
+% if (out.optimal == 1)
+%     s_opt.sample.x = out.x0;
+%     out_sim_peak = sampler(out.dynamics, 1, s_opt);
+%     nplot = nonneg_plot(out, out_sim, out_sim_peak);
+%     cplot = cost_plot(out, out_sim, out_sim_peak);
+%     splot = state_plot_2(out, out_sim, out_sim_peak);
+%     %     splot = state_plot_N(out, out_sim, out_sim_peak);
+% else
     nplot = nonneg_plot(out, out_sim);
     cplot = cost_plot(out, out_sim);
     splot = state_plot_2(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
-end
+% end
 end
