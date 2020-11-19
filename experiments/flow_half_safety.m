@@ -45,8 +45,8 @@ c1f = Ru^2 - (x(1) - Cu(1)).^2 - (x(2) - Cu(2)).^2;
 %tilt angle
 %order 5: 
 
-theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1]
-% theta_c = 3*pi/4;       %p* = 0.1935, beta = [0.712, 0.287]
+% theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1], safe
+theta_c = 3*pi/4;       %p* = 0.1935, beta = [0.712, 0.287], unsafe
 % theta_c = 0;
 % theta_c = 3*pi/2;    
 % theta_c = 7*pi/4;
