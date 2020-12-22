@@ -48,7 +48,11 @@ for i = 1:length(out_sim)
                 legend('location', 'east')
                 plot(t_curr, nonneg_curr(k, :), 'c', 'DisplayName', 'Trajectories')
             else
-                title(['Change in Value Function along System ', num2str(k-1)])
+                if nplt > 3
+                    title(['Change in Value Function along System ', num2str(k-1)])
+                else
+                    title(['Change in Value Function along System'])
+                end
                 xlabel('time')
 %                 ylabel(['L_{f', num2str(k-1), '} v(t,x)'])
                 ylabel(['$L_{f', num2str(k-1), '} v(t,x)$'])
