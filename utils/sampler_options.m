@@ -26,5 +26,6 @@ classdef sampler_options < handle
                         'w', @() [], ...
                         'd', @() []);
         
+        parallel = 1;
     end
 end

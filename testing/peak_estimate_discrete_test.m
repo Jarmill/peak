@@ -71,7 +71,7 @@ p_opt.dynamics.X = X;
 p_opt.dynamics.discrete = 1;
 
 Tmax_sim = 100;
-%p_opt.Tmax = Tmax_sim;
+p_opt.Tmax = Tmax_sim;
 
 p_opt.box = 4;
 p_opt.scale = 0;

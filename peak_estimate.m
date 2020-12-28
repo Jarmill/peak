@@ -398,7 +398,8 @@ supp_box = struct('T', [], 'X', [], 'W', [], 'D', []);
 %absolute continuity constraint for box program
 abscont = [];
 
- for i = 1:nsys
+mass_occ = 0; %mass of occupation measure
+for i = 1:nsys
     
     %support the valid time range
     if TIME_INDEP
@@ -436,6 +437,8 @@ abscont = [];
         [mu_occ{i}, mon_occ{i}, supp_occ_curr, Ay_curr] = occupation_measure(f{i}, ...
             supp_curr, options.var, var_new, degree, options.dynamics.discrete);
     end
+    
+    mass_occ = mass_occ + mass(mu_occ{i});
 
     %append supports of current system
     supp_occ.T = [supp_occ.T; supp_occ_curr.T];
@@ -456,6 +459,10 @@ supp_con = [T0; Tsupp; Xp; X0; supp_occ.T; supp_occ.X;  ...
 %careful of monic substitutions ruining dual variables
 Liou = Ay + (y0 - yp);
 mom_con = [mass(mu0) == 1; Liou == 0; abscont];
+
+if options.dynamics.discrete && (options.Tmax < Inf)
+    mom_con = [mom_con; mass_occ <= options.Tmax];
+end
 
 obj = options.obj;
 if nobj == 1
@@ -591,7 +598,7 @@ if BOX_VAR
                             [n_mon, nb, nsys]);
     mon_z = mmon([tp; xp; wp; options.var.d], degree);
     zeta = zeros(nb, nsys)*xp(1); %allocate mpol array
-    zeta_sum = zeros(nb, nsys)*xp(1);
+    zeta_sum = zeros(nsys, 1)*xp(1);
     
     %compute Lie derivatives
     Lv =  zeros(1, nsys)*xp(1);
@@ -615,7 +622,7 @@ if BOX_VAR
             
             fik = subs(fi, options.var.b, I(k, :)) - fi0;
             
-            Lgv(i, k) = diff(v, xp) * fik;                        
+            Lgv(k, i) = diff(v, xp) * fik;                        
         end
     end
     
@@ -778,14 +785,10 @@ if BOX_VAR
        out.func.boxcon=   @(t, x, w, d) eval(boxcon, ...
            [tp; xp; wp; options.var.d],  [t; x; repmat(w,size(x, 2)); d]);
     end
-end
-
-%TODO: add functionality for b (zeta)
-if BOX_VAR
     out.func.nonneg = @(t, x, w, d) ...
-                    [out.func.vval(t, x, w) + obj_rec; ...                                        
-                    out.func.boxcon(t, x, w, d); ...
-                    -out.func.vval(t, x, w) - out.func.cost_beta(x)];
+                [out.func.vval(t, x, w) + obj_rec; ...                                        
+                out.func.boxcon(t, x, w, d); ...
+                -out.func.vval(t, x, w) - out.func.cost_beta(x)];
 else
     out.func.nonneg = @(t, x, w, d) ...
                     [out.func.vval(t, x, w) + obj_rec; ...
@@ -977,7 +980,7 @@ function [mu, mon_occ, supp_occ, Ay, sigma, sigma_c, supp_box, abscont] = ...
         
         %dynamics on box variable
         fk = subs(f, var.b, I(:, k)) - f0;
-        
+        fk = subs(fk, var.x, xbk);
         %<d/dx_k v(t, x, w), sigma_k >
         Ayk = mom(diff(mon_b, xbk) * fk);
         

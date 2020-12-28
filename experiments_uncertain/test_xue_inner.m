@@ -9,27 +9,32 @@ rng(300, 'twister')
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
 
-
+mpol('t', 1, 1);
 mpol('x', 2, 1);
 mpol('d', 1, 1);
 
 %support
 Xsupp = [];
 
+%order 4
+%obj = 0.4925
+
 %dynamics
 %in principle, d is in a box [0,1]
-dmax = 0.4;
-draw = dmax*(2*d - 1);
+dmax = 0.2;
+% draw = dmax*(2*d - 1);
 
-f = [x(2); -x(1) - x(2) + (1/3).* x(1).^3 + draw];
+% f = [x(2); -x(1) - x(2) + (1/3).* x(1).^3 + draw];
+
+f = [-0.5*x(1) - (0.5 + d)*x(2) + 0.5; -0.5*x(2) + 1];
 X = [];
 
 
 
 %initial set
 %C0 = [1.2; 0];
-C0 = [1.5; 0];
-R0 = 0.4;
+C0 = [-1; -1];
+R0 = 0.5;
 
 %C0 = [0.8; 0];
 %R0 = 0.1;
@@ -37,37 +42,38 @@ R0 = 0.4;
 X0 = ((x(1)-C0(1))^2 + (x(2)-C0(2))^2 <= R0^2);
 
 %objective to maximize
-objective = -x(2);
-%objective = -x(2) - x(1);
-%
+objective = x(1);
+
 p_opt = peak_options;
+p_opt.var.t = t;
 p_opt.var.x = x;
 p_opt.var.d = d;
 
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
-% p_opt.disturb = (d^2 <= dmax^2);
-p_opt.disturb = (d*(1-d) >= 0);
+p_opt.disturb = (d^2 <= dmax^2);
+% p_opt.disturb = (d*(1-d) >= 0);
+
 
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
 
 
-Tmax_sim = 5;
-% p_opt.Tmax = Tmax_sim;
+Tmax_sim = 10;
+p_opt.Tmax = Tmax_sim;
 
 
 
 % p_opt.box = 3;
-p_opt.box = [-1, 3; -1.5, 2];
+p_opt.box = [-2, 2; -2, 4];
 p_opt.scale = 0;
 
 
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 5;
+order = 4;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
@@ -94,6 +100,7 @@ s_opt.parallel = 1;
 s_opt.mu = 0.4;
 
 out_sim = sampler(out.dynamics, Nsample, s_opt);
+out.optimal = 0;
 
 % out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
 
