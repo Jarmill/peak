@@ -124,12 +124,12 @@ PLOT_V = isempty(out.var.w);
 if PLOT_V
     if out.dynamics.time_indep
         %time independent
-        vy = out.func.vval(t, y, []) + out.peak_val;
+        vy = -out.func.vval(t, y, []) + out.peak_val;
 
         fimplicit(vy, [xlim, ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
         vyt = 1e-8*t + vy ;
     else
-        vyt = out.func.vval(t, y, []) + out.peak_val;
+        vyt = -out.func.vval(t, y, []) + out.peak_val;
     end    
 end
 

@@ -457,7 +457,8 @@ supp_con = [T0; Tsupp; Xp; X0; supp_occ.T; supp_occ.X;  ...
     supp_box.T; supp_box.X; supp_box.W; supp_box.D];
 
 %careful of monic substitutions ruining dual variables
-Liou = Ay + (y0 - yp);
+% Liou = Ay + (y0 - yp);
+Liou = yp - y0 - Ay;
 mom_con = [mass(mu0) == 1; Liou == 0; abscont];
 
 if options.dynamics.discrete && (options.Tmax < Inf)
@@ -597,6 +598,12 @@ if BOX_VAR
     dual_rec_zeta = reshape(dual_rec_1(n_mon + (1:n_mon*nb*nsys)), ...
                             [n_mon, nb, nsys]);
     mon_z = mmon([tp; xp; wp; options.var.d], degree);
+
+    if ~TIME_INDEP  
+        mon_z = subs(mon_z, tp, tp/options.Tmax);
+    end
+%     end
+%     mon_z = mmon([tp; xp; wp; options.var.d], degree);
     zeta = zeros(nb, nsys)*xp(1); %allocate mpol array
     zeta_sum = zeros(nsys, 1)*xp(1);
     
@@ -627,8 +634,8 @@ if BOX_VAR
     end
     
     %formulate polynomials that should be nonnegative
-    mu_con = (Lv - zeta_sum)';
-    sigma_con = reshape(Lgv + zeta, [], 1);
+    mu_con = (-Lv + zeta_sum)';
+    sigma_con = reshape(-Lgv + zeta, [], 1);
     sigmac_con = reshape(zeta, [], 1);
     
     boxcon = [mu_con; sigma_con; sigmac_con];       
@@ -786,14 +793,14 @@ if BOX_VAR
            [tp; xp; wp; options.var.d],  [t; x; repmat(w,size(x, 2)); d]);
     end
     out.func.nonneg = @(t, x, w, d) ...
-                [out.func.vval(t, x, w) + obj_rec; ...                                        
+                [-out.func.vval(t, x, w) + obj_rec; ...                                        
                 out.func.boxcon(t, x, w, d); ...
-                -out.func.vval(t, x, w) - out.func.cost_beta(x)];
+                out.func.vval(t, x, w) - out.func.cost_beta(x)];
 else
     out.func.nonneg = @(t, x, w, d) ...
-                    [out.func.vval(t, x, w) + obj_rec; ...
-                    out.func.Lvval(t, x, w, d); ...
-                    -out.func.vval(t, x, w) - out.func.cost_beta(x)];
+                    [-out.func.vval(t, x, w) + obj_rec; ...
+                    -out.func.Lvval(t, x, w, d); ...
+                    out.func.vval(t, x, w) - out.func.cost_beta(x)];
 end        
 
             
@@ -976,7 +983,9 @@ function [mu, mon_occ, supp_occ, Ay, sigma, sigma_c, supp_box, abscont] = ...
         
         %absolute continuity
         %check the sign with regards to the dual variable zeta
-        abscont = [abscont; yb + yc - y_occ == 0];
+        abscont_curr = ((yb + yc - y_occ) == 0);
+%         abscont_curr = (-(yb + yc - y_occ) == 0);
+        abscont = [abscont; abscont_curr];
         
         %dynamics on box variable
         fk = subs(f, var.b, I(:, k)) - f0;
