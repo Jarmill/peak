@@ -22,8 +22,8 @@ Xsupp = [];
 
 %dynamics
 %in principle, d is in a box
-% dmax = 0.5;
-dmax = 0.4;
+dmax = 0.5;
+% dmax = 0.4;
 % dmax = 0.3;
 % dmax = 0.2;
 % draw = dmax.*(2.*d - 1);
