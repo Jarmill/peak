@@ -52,9 +52,9 @@ end
 %initial conditions
 for i = 1:length(out_sim)
     if i == 1
-       scatter3(out_sim{i}.x(1, 1), out_sim{i}.x(1, 2), out_sim{i}.x(1, 3), 100, 'k', 'DisplayName', 'Initial Points');       
+       scatter3(out_sim{i}.x(1, 1), out_sim{i}.x(1, 2), out_sim{i}.x(1, 3), 50, 'k', 'DisplayName', 'Initial Points');       
     else        
-       scatter3(out_sim{i}.x(1, 1), out_sim{i}.x(1, 2), out_sim{i}.x(1, 3), 100, 'k', 'HandleVisibility', 'Off');           
+       scatter3(out_sim{i}.x(1, 1), out_sim{i}.x(1, 2), out_sim{i}.x(1, 3), 50, 'k', 'HandleVisibility', 'Off');           
     end
 end
 

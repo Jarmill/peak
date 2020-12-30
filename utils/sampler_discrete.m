@@ -44,7 +44,8 @@ X(1, :) = x0;
 x_curr = x0;
 system_choice = [];
 
-d_accum = [];
+% d_accum = [];
+d_accum = opts.sample.d();
 
 
 for k = 2:(Tmax+1)
@@ -96,6 +97,8 @@ else
     d_accum = [d_accum; d_curr'];  %general
 end
 
+
+
 %package up the output
 %out = struct('t', times, 'x', x, 'break_sys', sys_id, 'break_time', time_break);
 out_sim = struct;
@@ -109,6 +112,9 @@ out_sim.d = d_accum;
 out_sim.break_sys = system_choice;
 
 out_sim.cost = dynamics.cost(X');
+
+%pad d with zeros in case of early termination (system exits X)
+d_accum = [d_accum; zeros(opts.Tmax +1 - size(d_accum, 1), size(d_accum, 2))];
 
 if isfield(dynamics, 'nonneg')    
     out_sim.nonneg = dynamics.nonneg(T', X', w0, d_accum');

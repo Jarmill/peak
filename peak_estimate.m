@@ -589,6 +589,12 @@ else
     beta = dual_rec{2};
 end
 
+if options.dynamics.discrete && options.Tmax < Inf    
+    alpha_time = dual_rec{2 + (nobj > 1)};
+else
+    alpha_time = 0;
+end
+
 v = dual_rec_v'*monp_unscale;
 if BOX_VAR
     %check with equality constraints of support. There may be some extra
@@ -605,7 +611,7 @@ if BOX_VAR
 %     end
 %     mon_z = mmon([tp; xp; wp; options.var.d], degree);
     zeta = zeros(nb, nsys)*xp(1); %allocate mpol array
-    zeta_sum = zeros(nsys, 1)*xp(1);
+    zeta_sum = zeros(1, nsys)*xp(1);
     
     %compute Lie derivatives
     Lv =  zeros(1, nsys)*xp(1);
@@ -644,7 +650,7 @@ else
     for i = 1:nsys
         if options.dynamics.discrete
             %discrete time
-            pushforward = subs(v, xp, options.dynamics.f{i});
+            pushforward = eval(v, xp, options.dynamics.f{i});
             Lv_curr = pushforward - v;
         else
             %continuous time
@@ -799,11 +805,17 @@ if BOX_VAR
 else
     out.func.nonneg = @(t, x, w, d) ...
                     [-out.func.vval(t, x, w) + obj_rec; ...
-                    -out.func.Lvval(t, x, w, d); ...
+                    alpha_time-out.func.Lvval(t, x, w, d); ...
                     out.func.vval(t, x, w) - out.func.cost_beta(x)];
+                
+                %alpha_time is there to make sure that time-constraints
+                %without time are appropriately handled. This is useful for
+                %discrete systems to impose only T steps are used, and
+                %measures are therefore bounded.
 end        
 
-            
+out.alpha_time = alpha_time;         
+out.dynamics.Tmax = options.Tmax;
 out.dynamics.cost = out.func.cost;
 out.dynamics.nonneg = out.func.nonneg;
 %% Done!

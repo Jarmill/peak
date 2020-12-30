@@ -64,7 +64,7 @@ p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
 
-Tmax_sim = 10;
+Tmax_sim = 5;
 if TIME_VARYING
     p_opt.Tmax = Tmax_sim;
 end
@@ -91,7 +91,8 @@ x0 = C0;
 
 % mu = 1;
 
-Nsample = 100;
+Nsample = 200;
+% Nsample = 100;
 % Nsample = 50;
 % Nsample = 20;
 % sampler = @() circle_sample(1)'*R0 + C0;
@@ -116,7 +117,7 @@ disp(['Sampler Elapsed Time: ' , num2str(sample_time), ' seconds'])
 %     splot = state_plot_2(out, out_sim, out_sim_peak);
 %     %     splot = state_plot_N(out, out_sim, out_sim_peak);
 % else
-%     nplot = nonneg_plot(out, out_sim);
+    nplot = nonneg_plot(out, out_sim);
     splot = state_plot_3(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
 % end

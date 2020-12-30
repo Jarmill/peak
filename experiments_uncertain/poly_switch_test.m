@@ -21,15 +21,11 @@ mpol('x', 2, 1);
 Xsupp = [];
 
 %dynamics
-%in principle, d is in a box
-dmax = 0.5;
-% dmax = 0.4;
-% dmax = 0.3;
-% dmax = 0.2;
-% draw = dmax.*(2.*d - 1);
 
-f1 = [-5*x(1) - 4*x(2); -x(1) - 2*x(2)];
-f2 = [-2*x(1) - 4*x(2); 20*x(1) - 2*x(2)];
+%stable under arbitrary switching
+%added cubic and mixed terms to make system polynomial (and interesting)
+f1 = [-5*x(1) - 8*x(2) + 0.1*x(1)*x(2); - 2*x(2) - 0.1*x(1)^3];
+f2 = [-2*x(1) - 4*x(2) - 0.1*x(2)^3; 10*x(1) - 2*x(2) + 0.1*x(1)*x(2)];
 
 
 f = {f1, f2};
@@ -37,15 +33,14 @@ X = {[], []};
 
 
 %initial set
-C0 = [1; 1];
+% C0 = [1; 1];
+C0 = -[1; 1];
 R0 = 0.5;
-
-%C0 = [0.8; 0];
-%R0 = 0.1;
 
 X0 = ((x(1)-C0(1))^2 + (x(2)-C0(2))^2 <= R0^2);
 %objective to maximize
-objective = -x(2);
+% objective = -x(2);
+objective = x(2);
 %objective = -x(2) - x(1);
 %
 p_opt = peak_options;
@@ -63,13 +58,14 @@ p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
 
-Tmax_sim = 10;
+Tmax_sim = 4;
 if TIME_VARYING
     p_opt.Tmax = Tmax_sim;
 end
 
-p_opt.box = 3;
-% p_opt.box = [-2, 3; -1, 3];
+% p_opt.box = 3;
+p_opt.box = [-1.5, 2; -2, 2];
+% p_opt.box = [-2.5, 2; -2.5, 2.5];
 % p_opt.box = [-4, 0.5, 0; 2, 3.5, 4]';
 p_opt.scale = 0;
 
@@ -90,16 +86,14 @@ x0 = C0;
 
 % mu = 1;
 
-% Nsample = 200;
-Nsample = 50;
+Nsample = 150;
+% Nsample = 50;
 % Nsample = 20;
 % sampler = @() circle_sample(1)'*R0 + C0;
 
 s_opt = sampler_options;
 s_opt.sample.x = @() sphere_sample(1, 2)'*R0 + C0;
-% s_opt.sample.d = @() dmax * (2*rand(2, 1) - 1);
 s_opt.Tmax = Tmax_sim;
-s_opt.Nd = 2;
 s_opt.parallel = 1;
 
 
@@ -119,6 +113,6 @@ disp(['Sampler Elapsed Time: ' , num2str(sample_time), ' seconds'])
 % else
     nplot = nonneg_plot(out, out_sim);
 
-    splot = state_plot_2(out, out_sim);
+    splot = state_plot_2_lim(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
 % end
