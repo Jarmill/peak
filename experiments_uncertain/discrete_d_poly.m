@@ -40,6 +40,7 @@ X2 = [x(1) >= 0];
 POLY = 1;
 if POLY
 %     f1 = f1 + 0.1*[-x(1)*x(2); x(1)*x(2)];
+    f1 = f1 + 0.1*[x(1)*x(2); 0];
     f2 = f2 + 0.01*[-x(1)^2; -x(1)*x(2)];
 end
 
@@ -82,7 +83,7 @@ p_opt.dynamics.X = X;
 
 p_opt.dynamics.discrete = 1;
 
-Tmax_sim = 30;
+Tmax_sim = 50;
 p_opt.Tmax = Tmax_sim;
 
 p_opt.box = 3;
@@ -115,7 +116,7 @@ s_opt.sample.x = @() sphere_sample(1, 2)'*R0 + C0;
 s_opt.sample.d = @() dmax * (2*rand() - 1);
 s_opt.Nd = 1;
 s_opt.Tmax = Tmax_sim;
-s_opt.parallel = 0;
+s_opt.parallel = 1;
 out_sim = sampler(out.dynamics, Nsample, s_opt);
 
 % if (out.optimal == 1)
