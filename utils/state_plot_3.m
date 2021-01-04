@@ -67,7 +67,6 @@ syms t
 
 MD = 60;
 
-
 if out.dynamics.time_indep
     %time independent
     vy = out.func.vval(0, y, []) + out.peak_val;    

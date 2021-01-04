@@ -28,20 +28,16 @@ dmax = 0.5;
 % dmax = 0.2;
 % draw = dmax.*(2.*d - 1);
 
-wmax = 0.2;
-
-% f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2) + draw];
-% f = [x(2); -x(1) - 3*x(2) + draw];
-% f = [x(2); -x(1) - x(2) + (1/3).* x(1).^3 + draw];
+wmax = 0.1;
 
 d = dmax *(2*b - 1);
 
 a0 = 1 + d(1);
-b0 = 1 + d(2);
-G0 = 2 + w;
-f = [a0*x(1) + b0*x(2) + x(3) - G0*x(2)^2;
-    a0*x(2) - b0*x(1) + G0*x(1)*x(2);
-    -G0*x(3) - G0*x(1)*x(3)];
+b0 = (1 + d(2))/2;
+G0 = 2 + wmax*w;
+f = [a0*x(1) + b0*x(2) + x(3) - 2*x(2)^2;
+    a0*x(2) - b0*x(1) + 2*x(1)*x(2);
+    -G0*x(3) - 2*x(1)*x(3)];
 
 X = [];
 
@@ -69,7 +65,7 @@ p_opt.var.b = b;
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
 % p_opt.disturb = (d.^2 <= dmax^2);
-p_opt.param = (w^2 <= wmax^2);
+p_opt.param = (w^2 <= 1);
 
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
@@ -82,7 +78,7 @@ end
 
 % p_opt.box = 4;
 % p_opt.box = [-1, 3; -1.5, 2];
-p_opt.box = [-4, 0.5, 0; 2, 3.5, 4]';
+p_opt.box = [-4, 0.5, 0; 3, 3.6, 4]';
 p_opt.scale = 0;
 
 

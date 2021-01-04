@@ -13,12 +13,17 @@ if SOLVE
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
 mpol('x', 2, 1);
+mpol('b', 1, 1);
 
+% dmax = 0.1;
+% dmax = 0.3;
+dmax = 0.5;
+draw = dmax * (2*b - 1);
 %support
 Xsupp = [];
 
 %dynamics
-f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+f = [x(2); -x(1) + (1+draw)*(1/3).* x(1).^3 - x(2) ];
 X = [];
 
 
@@ -60,6 +65,7 @@ objective = [c1f; c2f];
 %
 p_opt = peak_options;
 p_opt.var.x = x;
+p_opt.var.b = b;
 
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
@@ -79,7 +85,7 @@ p_opt.scale = 0;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 5;
+order = 6;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
@@ -92,19 +98,21 @@ x0 = C0;
 
 mu = 1;
 
-Nsample = 60;
-% Nsample = 20;
-s_opt = sampler_options;
-s_opt.sample.x = @() sphere_sample(1, 2)'*R0 + C0;
-s_opt.Tmax = Tmax_sim;
-s_opt.parallel = 0;
+Nsample = 200;
 
+s_opt = sampler_options;
+s_opt.sample.x = @() ball_sample(1, 2)'*R0 + C0;
+s_opt.Tmax = Tmax_sim;
+s_opt.Nb = 1;
+s_opt.parallel = 1;
+
+s_opt.mu = 0.2;
 tic
 out_sim = sampler(out.dynamics, Nsample, s_opt);
 sample_time = toc;
+
+
 if (out.optimal == 1)
-    s_opt.sample.x = @() out.x0;
-    out_sim_peak = sampler(out.dynamics, 1, s_opt);
 %     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
     nplot = nonneg_plot(out, out_sim, out_sim_peak);
 %     splot = state_plot_2(out, out_sim, out_sim_peak);

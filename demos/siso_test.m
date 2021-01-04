@@ -6,7 +6,7 @@
 
 nsys = 3;
 
-SOLVE = 0;
+SOLVE = 1;
 PLOT = 1;
 MD = 200; %mesh density for 3d
 Tmax = 20;
@@ -132,7 +132,7 @@ syms xc [n, 1];
 % end
 
 vv = conj(monolistYalToGlop(xc, d));
-p = dual_rec'*vv;
+p = dual_rec{1}'*vv;
 %Lp = diff(p, xc)*sys.A*xc;
 Lp = jacobian(p, xc)*sys.A*xc;
 

@@ -31,8 +31,11 @@ Xsupp = [];
 % f = [x(2); -x(1) - 3*x(2) + draw];
 % f = [x(2); -x(1) - x(2) + (1/3).* x(1).^3 + draw];
 
+% a = 1;
+% b = 1;
 a = 1;
-b = 1;
+b = 0.5;
+
 f = [a*x(1) + b*x(2) + x(3) - 2*x(2)^2;
     a*x(2) - b*x(1) + 2*x(1)*x(2);
     -2*x(3) - 2*x(1)*x(3)];
@@ -71,14 +74,14 @@ end
 
 % p_opt.box = 4;
 % p_opt.box = [-1, 3; -1.5, 2];
-p_opt.box = [-4, 0.5, 0; 2, 3, 4]';
+p_opt.box = [-4, 0.5, 0; 2, 3.5, 4]';
 p_opt.scale = 0;
 
 
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 4;
+order = 3;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
@@ -101,7 +104,7 @@ s_opt = sampler_options;
 % s_opt.sample.x = @() circle_sample(1)'*R0 + C0;
 s_opt.sample.x = @() sphere_sample(1, 3)'*R0 + C0;
 s_opt.Tmax = Tmax_sim;
-s_opt.Nb = 1;
+% s_opt.Nb = 1;f
 
 s_opt.mu = 0.4;
 tic
@@ -110,14 +113,16 @@ sample_time = toc;
 disp(['Sampler Elapsed Time: ' , num2str(sample_time), ' seconds'])
 % out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
 
-% if (out.optimal == 1)
-%     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
-%     nplot = nonneg_plot(out_sim, out_sim_peak);
+if (out.optimal == 1)
+    s_opt.sample.x = out.x0;
+    out_sim_peak = sampler(out.dynamics, 1, s_opt);
+    nplot = nonneg_plot(out, out_sim, out_sim_peak);
 % 
 %     splot = state_plot_2(out, out_sim, out_sim_peak);
-%     %     splot = state_plot_N(out, out_sim, out_sim_peak);
-% else
+%     splot = state_plot_N(out, out_sim, out_sim_peak);
+    splot = state_plot_3(out, out_sim, out_sim_peak);
+else
     nplot = nonneg_plot(out, out_sim);
     splot = state_plot_3(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
-% end
+end

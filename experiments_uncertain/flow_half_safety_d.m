@@ -13,12 +13,15 @@ if SOLVE
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
 mpol('x', 2, 1);
+mpol('d', 1, 1);
 
+dmax = 0.15;
+draw = dmax * d;
 %support
 Xsupp = [];
 
 %dynamics
-f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+f = [x(2); -x(1)*(1+ draw) + (1/3).* x(1).^3 - x(2)*(1+ draw) ];
 X = [];
 
 
@@ -60,7 +63,9 @@ objective = [c1f; c2f];
 %
 p_opt = peak_options;
 p_opt.var.x = x;
+p_opt.var.d = d;
 
+p_opt.disturb = (d^2 <= 1);
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
 
@@ -92,28 +97,23 @@ x0 = C0;
 
 mu = 1;
 
-Nsample = 60;
-% Nsample = 20;
+Nsample = 300;
+
 s_opt = sampler_options;
 s_opt.sample.x = @() sphere_sample(1, 2)'*R0 + C0;
+s_opt.sample.d = @() dmax * (2*rand() -1 );
 s_opt.Tmax = Tmax_sim;
-s_opt.parallel = 0;
+s_opt.Nb = 1;
+s_opt.parallel = 1;
 
+s_opt.mu = 0.2;
 tic
 out_sim = sampler(out.dynamics, Nsample, s_opt);
 sample_time = toc;
-if (out.optimal == 1)
-    s_opt.sample.x = @() out.x0;
-    out_sim_peak = sampler(out.dynamics, 1, s_opt);
-%     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
-    nplot = nonneg_plot(out, out_sim, out_sim_peak);
-%     splot = state_plot_2(out, out_sim, out_sim_peak);
-    %     splot = state_plot_N(out, out_sim, out_sim_peak);
-else
+
+
+
     nplot = nonneg_plot(out, out_sim);
-%     splot = state_plot_2(out, out_sim);
-%     splot = state_plot_N(out, out_sim);
-end
 end
 
 if PLOT
@@ -195,24 +195,8 @@ if PLOT
 
     fimplicit(vy, [xlim, ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
         
-    if out.optimal
-        %global optimum was found
-        %hlines_p = streamline(x, y, xdot, ydot, x0_out(1), x0_out(2));
-        %set(hlines_p, 'LineWidth', 2)
-
-        plot(out_sim_peak{1}.x(:, 1), out_sim_peak{1}.x(:, 2), 'b', 'HandleVisibility', 'off', 'Linewidth', 2);
-
-        scatter(out.x0(1), out.x0(2), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
-        scatter(out.xp(1), out.xp(2), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
-         
-        legend({'Trajectories', 'Initial Set', 'Unsafe Set', 'Safety Margin', 'Invariant Set', 'Peak Traj.'}, 'location', 'northwest')
-%         legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories', 'Peak Traj.'}, 'location', 'northwest')
-%         title(['Safety Margin for Trajectories = ', num2str(obj, 3), ' at time t = ', num2str(tp_out, 3)])
-    else
-        legend({'Trajectories', 'Initial Set', 'Unsafe Set', 'Safety Margin', 'Invariant Set'}, 'location', 'northwest')
-%         legend({'Initial Set', 'Unsafe Set', 'Safety Margin', 'Trajectories'}, 'location', 'northwest')
-%         title(['Safety Margin for Trajectories = ', num2str(obj, 2)])
-    end
+    legend({'Trajectories', 'Initial Set', 'Unsafe Set', 'Safety Margin', 'Invariant Set'}, 'location', 'northwest')
+       
     
     %xlim([-m, m])
     %ylim([-m, m])

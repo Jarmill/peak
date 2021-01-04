@@ -15,7 +15,7 @@ TIME_VARYING = 1;
 mpol('t', 1, 1);
 mpol('x', 3, 1);
 mpol('d', 2, 1);
-% mpol('b', 1, 1);
+mpol('w', 1, 1);
 
 %support
 Xsupp = [];
@@ -26,17 +26,16 @@ dmax = 0.5;
 % dmax = 0.4;
 % dmax = 0.3;
 % dmax = 0.2;
-% draw = dmax.*(2.*d - 1);
+draw = dmax.*d;
 
-% f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2) + draw];
-% f = [x(2); -x(1) - 3*x(2) + draw];
-% f = [x(2); -x(1) - x(2) + (1/3).* x(1).^3 + draw];
+wmax = 0.1;
 
-a = 1 + d(1);
-b = 1 + d(2);
+a = 1 + draw(1);
+b = (1 + draw(2))/2;
+G0 = 2 + wmax*w;
 f = [a*x(1) + b*x(2) + x(3) - 2*x(2)^2;
     a*x(2) - b*x(1) + 2*x(1)*x(2);
-    -2*x(3) - 2*x(1)*x(3)];
+    -G0*x(3) - 2*x(1)*x(3)];
 
 X = [];
 
@@ -57,24 +56,27 @@ p_opt = peak_options;
 p_opt.var.t = t;
 p_opt.var.x = x;
 p_opt.var.d = d;
+p_opt.var.w = w;
 
 % p_opt.var.b = b;
 
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
-p_opt.disturb = (d.^2 <= dmax^2);
+p_opt.disturb = (d.^2 <= 1);
+p_opt.param = (w^2 <= 1);
 
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
 p_opt.dynamics.X = X;
 
-Tmax_sim = 10;
+Tmax_sim = 5;
 if TIME_VARYING
     p_opt.Tmax = Tmax_sim;
 end
 
 % p_opt.box = 4;
-p_opt.box = [-4, 0.5, 0; 2, 3.5, 4]';
+p_opt.box = [-4, 0.5, 0; 3, 3.6, 4]';
+% p_opt.box = [-4, 0.5, 0; 3, 4, 4]';
 p_opt.scale = 0;
 
 
@@ -102,9 +104,11 @@ Nsample = 200;
 s_opt = sampler_options;
 % s_opt.sample.x = @() circle_sample(1)'*R0 + C0;
 s_opt.sample.x = @() sphere_sample(1, 3)'*R0 + C0;
-s_opt.sample.d = @() dmax * (2*rand(2, 1) - 1);
+s_opt.sample.d = @() (2*rand(2, 1) - 1);
+s_opt.sample.w = @() (2*rand(1, 1) - 1);
 s_opt.Tmax = Tmax_sim;
 s_opt.Nd = 2;
+s_opt.Nw = 1;
 s_opt.parallel = 1;
 
 
@@ -122,7 +126,7 @@ disp(['Sampler Elapsed Time: ' , num2str(sample_time), ' seconds'])
 %     splot = state_plot_2(out, out_sim, out_sim_peak);
 %     %     splot = state_plot_N(out, out_sim, out_sim_peak);
 % else
-%     nplot = nonneg_plot(out, out_sim);
+    nplot = nonneg_plot(out, out_sim);
     splot = state_plot_3(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
 % end
