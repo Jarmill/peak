@@ -53,7 +53,7 @@ for k = 2:(Tmax+1)
     %find which systems are valid
     possible_sys = [];
     for i = 1:nsys        
-        event_value = dynamics.event{i}(k, x_curr, w0);
+        event_value = dynamics.event{i}(k-1, x_curr, w0);
 
         if event_value == 1
             possible_sys = [possible_sys; i];
@@ -70,7 +70,7 @@ for k = 2:(Tmax+1)
     %choose which system to use. curr_event not needed, validity evaluated
     %on next state iteration
     curr_sys = possible_sys(curr_sys_ind);            
-    system_choice(k-1) = curr_sys;
+    system_choice(k) = curr_sys;
     
     %sample the time-varying disturbance
     d_curr = opts.sample.d();
