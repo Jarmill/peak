@@ -1,3 +1,15 @@
+% Estimate moments of a trajectory solving a delay differential equation
+% x'(t) = -K x(t - tau) where the state history is constant at xh0
+%
+% Right now there is a disagreement in the moments, refer to the variable 
+% 'm_comp'. Empirical moments from a trajectory are on the left, and
+% moments from the LMI (t,x0 marginal of joint occupation measure) are on 
+% the right. The (t) marginal is the same, but moments with x0 are not
+% aligned. Disagreement may be due to issues in theory or implementation.
+% 
+% Author: Jared Miller
+%         Feb 2, 2021.
+
 %% parameters
 PLOT = 1;
 T = 1;      %time horizon
@@ -133,18 +145,4 @@ function em = monom_int(t, x, dv)
         v_curr = (t.^dv(i, 1)) .* (x.^dv(i, 2));
         em(i) = trapz(t, v_curr);
     end
-end
-
-%% Functions to simulate delay differential equation
-function d = curr_delay(t,y)
-d = t - 0.25;
-end
-
-function y = history(t)
-    y = -1;
-end
-
-function dydt = ddex(t,y,Z)
-ylag = Z(:,1);
-dydt = -5*ylag(1);
 end
