@@ -36,6 +36,9 @@ end
 
 newp = p;
 
+v_old = indvar(old);
+
+if ~isnumeric(p)
 for rind = 1:nrows
     for cind = 1:ncols
         var = listvar(p(rind, cind));
@@ -45,7 +48,8 @@ for rind = 1:nrows
         for mind = 1:length(coef) % for all the monomials in p(rind, cind)
             tmp = coef(mind);
             for vind = 1:length(var) % for all the variables in p(rind, cind)
-                ind = locate(old, var(vind));
+%                 ind = locate(old, var(vind));
+                  ind = find(v_old == vind);
                 if isempty(ind)
                     tmp = tmp * var(vind)^pow(mind, vind);
                 else
@@ -55,4 +59,5 @@ for rind = 1:nrows
             newp(rind, cind) = newp(rind, cind) + tmp;
         end
     end
+end
 end

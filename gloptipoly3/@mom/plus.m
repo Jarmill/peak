@@ -50,7 +50,7 @@ else
   if ~isa(x,'double')
    error('Invalid first input argument')
   end
-  
+   
   x = mom(x,0);
  
  elseif ~isa(y,'mom')

@@ -15,15 +15,18 @@ if nrowa~=nrowb || ncola~=ncolb
     out = false;
 else
     % checking for differencies
-    for rind = 1:nrowa
-        for cind = 1:ncola
+%     for rind = 1:nrowa
+%         for cind = 1:ncola
             diff=a-b;
-            if diff.coef(1)~=0
-                out = false;
-                return
-            end
-        end
-    end
+            dcoef = [diff.coef];
+            
+            out = all(dcoef == 0);
+%             if dcoef(1)~=0
+%                 out = false;
+%                 return
+%             end
+%         end
+%     end
     % if this point is reached all the elements are equal
-    out = true;
+%     out = true;
 end
