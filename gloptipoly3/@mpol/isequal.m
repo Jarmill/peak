@@ -18,9 +18,9 @@ else
 %     for rind = 1:nrowa
 %         for cind = 1:ncola
             diff=a-b;
-            dcoef = [diff.coef];
+            dcoef = {diff.coef};
             
-            out = all(dcoef == 0);
+            out = cellfun(@(c) all(c == 0), dcoef);
 %             if dcoef(1)~=0
 %                 out = false;
 %                 return

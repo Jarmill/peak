@@ -49,6 +49,8 @@ for j = 1:npt
         dr = sym(dr);
     end
     
+    i_eq = 1;
+    i_ineq = 1;
     for i = 1:length(sc)    
         type = sc(i).type;
         
@@ -59,14 +61,17 @@ for j = 1:npt
         %dl = double(sc_subs(i).left);
         %dr = double(sc_subs(i).right);
         if strcmp(type, 'le')
-            sc_eval(i, j) = (dl(i) <= dr(i));
-            ineq(i, j) = dr(i) - dl(i);
+            sc_eval(i, j) = ((dl(i) - tol) <= dr(i));
+            ineq(i_ineq, j) = dr(i) - dl(i);
+            i_ineq = i_ineq + 1;
         elseif strcmp(type, 'ge')
-            sc_eval(i, j) = (dl(i) >= dr(i));
-            ineq(i, j) = dl(i) - dr(i);
+            sc_eval(i, j) = (dl(i) >= (dr(i) - tol));
+            ineq(i_ineq, j) = dl(i) - dr(i);
+            i_ineq = i_ineq + 1;
         else %equal
             sc_eval(i, j) = (abs(dl(i)-dr(i)) <= tol);
-            eq(i, j) = dl(i) - dr(i);
+            eq(i_eq, j) = dl(i) - dr(i);
+            i_eq = i_eq + 1;
         end
     end
 end

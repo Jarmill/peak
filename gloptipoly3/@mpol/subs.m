@@ -48,8 +48,8 @@ for rind = 1:nrows
         for mind = 1:length(coef) % for all the monomials in p(rind, cind)
             tmp = coef(mind);
             for vind = 1:length(var) % for all the variables in p(rind, cind)
-%                 ind = locate(old, var(vind));
-                  ind = find(v_old == vind);
+                ind = locate(old, var(vind));
+%                   ind = find(v_old == vind);
                 if isempty(ind)
                     tmp = tmp * var(vind)^pow(mind, vind);
                 else
