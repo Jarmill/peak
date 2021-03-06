@@ -14,8 +14,8 @@ TIME_VARYING = 1;
 
 mpol('t', 1, 1);
 mpol('x', 3, 1);
-mpol('d', 2, 1);
-mpol('w', 1, 1);
+mpol('b', 1, 1);
+mpol('w', 2, 1);
 
 %support
 Xsupp = [];
@@ -26,18 +26,34 @@ dmax = 0.5;
 % dmax = 0.4;
 % dmax = 0.3;
 % dmax = 0.2;
-draw = dmax.*d;
+% draw = dmax.*(2.*d - 1);
+% dmax = 0.1;
 
 wmax = 0.1;
 
-a = 1 + draw(1);
-b = (1 + draw(2))/2;
-G0 = 2 + wmax*w;
-f = [a*x(1) + b*x(2) + x(3) - 2*x(2)^2;
-    a*x(2) - b*x(1) + 2*x(1)*x(2);
-    -G0*x(3) - 2*x(1)*x(3)];
+d = dmax *(2*b - 1);
 
-X = [];
+% a0 = 1 + d(1);
+% b0 = (1 + d(2))/2;
+
+a0 = 1 + w(1)*wmax;
+b0 = (1 + w(2)*wmax)/2;
+G0 = 2 + d;
+f_base = [a0*x(1) + b0*x(2) + x(3) - 2*x(2)^2;
+    a0*x(2) - b0*x(1) + 2*x(1)*x(2);
+    -G0*x(3) - 2*x(1)*x(3)];
+f00 = subs(f_base, b, [0]);
+f10 = subs(f_base, b, [1]);
+
+
+% f00 = subs(f0, b, [0; 0]);
+% f10 = subs(f0, b, [1; 0]);
+% f01 = subs(f0, b, [0; 1]);
+% f11 = subs(f0, b, [1; 1]);
+
+% X = [];
+f = {f00, f10};
+X = {[],[]};
 
 
 %initial set
@@ -55,15 +71,15 @@ objective = x(2);
 p_opt = peak_options;
 p_opt.var.t = t;
 p_opt.var.x = x;
-p_opt.var.d = d;
 p_opt.var.w = w;
+% p_opt.var.b = b;
 
 % p_opt.var.b = b;
 
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
-p_opt.disturb = (d.^2 <= 1);
-p_opt.param = (w^2 <= 1);
+% p_opt.disturb = (d.^2 <= dmax^2);
+p_opt.param = (w.^2 <= 1);
 
 p_opt.dynamics = struct;
 p_opt.dynamics.f = f;
@@ -75,15 +91,16 @@ if TIME_VARYING
 end
 
 % p_opt.box = 4;
+% p_opt.box = [-1, 3; -1.5, 2];
 p_opt.box = [-4, 0.5, 0; 3, 3.6, 4]';
-% p_opt.box = [-4, 0.5, 0; 3, 4, 4]';
 p_opt.scale = 0;
 
 
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 3;
+order = 4;
+% order = 2;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 
@@ -96,7 +113,7 @@ x0 = C0;
 
 % mu = 1;
 
-Nsample = 200;
+Nsample = 250;
 % Nsample = 50;
 % Nsample = 20;
 % sampler = @() circle_sample(1)'*R0 + C0;
@@ -104,11 +121,10 @@ Nsample = 200;
 s_opt = sampler_options;
 % s_opt.sample.x = @() circle_sample(1)'*R0 + C0;
 s_opt.sample.x = @() sphere_sample(1, 3)'*R0 + C0;
-s_opt.sample.d = @() (2*rand(2, 1) - 1);
-s_opt.sample.w = @() (2*rand(1, 1) - 1);
+s_opt.sample.w = @() wmax * (2*rand(2, 1) - 1);
 s_opt.Tmax = Tmax_sim;
-s_opt.Nd = 2;
-s_opt.Nw = 1;
+% s_opt.Nb = 2;
+s_opt.Nw = 2;
 s_opt.parallel = 1;
 
 
