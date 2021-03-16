@@ -52,9 +52,9 @@ end
 %initial conditions
 for i = 1:length(out_sim)
     if i == 1
-       scatter3(out_sim{i}.x(1, 1), out_sim{i}.x(1, 2), out_sim{i}.x(1, 3), 100, 'k', 'DisplayName', 'Initial Points');       
+       scatter3(out_sim{i}.x(1, 1), out_sim{i}.x(1, 2), out_sim{i}.x(1, 3), 50, 'k', 'DisplayName', 'Initial Points');       
     else        
-       scatter3(out_sim{i}.x(1, 1), out_sim{i}.x(1, 2), out_sim{i}.x(1, 3), 100, 'k', 'HandleVisibility', 'Off');           
+       scatter3(out_sim{i}.x(1, 1), out_sim{i}.x(1, 2), out_sim{i}.x(1, 3), 50, 'k', 'HandleVisibility', 'Off');           
     end
 end
 
@@ -67,15 +67,11 @@ syms t
 
 MD = 60;
 
-
-if ~isfield(out, 'tp')
+if out.dynamics.time_indep
     %time independent
-    vy = out.func.vval(y) + out.peak_val;    
+    vy = out.func.vval(0, y, []) + out.peak_val;    
     fimplicit3(vy, [stretch(xlim, box_margin), stretch(ylim, box_margin), stretch(zlim, box_margin)], 'EdgeColor', 'None','FaceColor', 'k', 'FaceAlpha', 0.3, ...
             'DisplayName', 'Invariant Set', 'MeshDensity', MD)
-    %vyt = 1e-8*t + vy ;
-else
-    %vyt = out.func.vval(t, y) - out.peak_val;
 end    
 cy = out.func.cost(y) - out.peak_val;
 

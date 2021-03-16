@@ -21,7 +21,7 @@ ranktol = 0.05;
 
 rng(890);
 
-nsys = 2;    
+nsys = 1;    
 if nsys == 1
     %DC motor example
     %constant Jm

@@ -63,22 +63,28 @@ peak_val = out.peak_val;
 rng(50, 'twister')
 x0 = C0;
 
-mu = 1;
+% mu = 1;
 
 %Nsample = 100;
-Nsample = 20;
-sampler = @() circle_sample(1)'*R0 + C0;
+Nsample = 50;
+% sampler = @() circle_sample(1)'*R0 + C0;
 
-out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
+s_opt = sampler_options;
+s_opt.sample.x = @() circle_sample(1)'*R0 + C0;
+s_opt.mu = 1;
 
-if (out.optimal == 1)
-    out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
-    nplot = nonneg_plot(out_sim, out_sim_peak);
+out_sim = sampler(out.dynamics, Nsample, s_opt);
 
-    splot = state_plot_2(out, out_sim, out_sim_peak);
-    %     splot = state_plot_N(out, out_sim, out_sim_peak);
-else
-    nplot = nonneg_plot(out_sim);
+% out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
+
+% if (out.optimal == 1)
+%     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
+%     nplot = nonneg_plot(out_sim, out_sim_peak);
+% 
+%     splot = state_plot_2(out, out_sim, out_sim_peak);
+%     %     splot = state_plot_N(out, out_sim, out_sim_peak);
+% else
+    nplot = nonneg_plot(out, out_sim);
     splot = state_plot_2(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
-end
+% end

@@ -31,9 +31,9 @@ for i = 1:length(out_sim)
                 title('Value Function along Trajectories')
                 xlabel('time')
                 if out.dynamics.time_indep
-                    ylabel('$v(x) + \gamma$', 'Interpreter', 'Latex')                
+                    ylabel('$\gamma - v(x)$', 'Interpreter', 'Latex')                
                 else    
-                    ylabel('$v(t,x) + \gamma$', 'Interpreter', 'Latex')                
+                    ylabel('$\gamma - v(t,x)$', 'Interpreter', 'Latex')                
                 end
                 legend('location', 'east')
             elseif k == nplt
@@ -41,25 +41,29 @@ for i = 1:length(out_sim)
                 xlabel('time')
 %                 ylabel('-cost(x) - v(t,x)')
                 if out.dynamics.time_indep
-                    ylabel('$-v(x) -\beta^T p(x)$', 'Interpreter', 'Latex')                
+                    ylabel('$v(x) -\beta^T p(x)$', 'Interpreter', 'Latex')                
                 else    
-                    ylabel('$-v(t, x) -\beta^T p(x)$', 'Interpreter', 'Latex')                
+                    ylabel('$v(t, x) -\beta^T p(x)$', 'Interpreter', 'Latex')                
                 end
                 legend('location', 'east')
                 plot(t_curr, nonneg_curr(k, :), 'c', 'DisplayName', 'Trajectories')
             else
-                title(['Change in Value Function along System ', num2str(k-1)])
+                if nplt > 3
+                    title(['Change in Value Function along System ', num2str(k-1)])
+                else
+                    title(['Change in Value Function along System'])
+                end
                 xlabel('time')
 %                 ylabel(['L_{f', num2str(k-1), '} v(t,x)'])
                 ylabel(['$L_{f', num2str(k-1), '} v(t,x)$'])
                 if out.dynamics.time_indep
                     if out.dynamics.discrete
-                        ylabel(['$v \circ f_{', num2str(k-1),'}(x)  - v(x)$'], 'Interpreter', 'Latex') 
+                        ylabel(['$ v(x) - v \circ f_{', num2str(k-1),'}(x)$'], 'Interpreter', 'Latex') 
                     else
-                        ylabel(['$L_{f', num2str(k-1), '} v(x)$'], 'Interpreter', 'Latex')                
+                        ylabel(['$-L_{f', num2str(k-1), '} v(x)$'], 'Interpreter', 'Latex')                
                     end
                 else    
-                    ylabel(['$L_{f', num2str(k-1), '} v(t,x)$'], 'Interpreter', 'Latex')                
+                    ylabel(['$-L_{f', num2str(k-1), '} v(t,x)$'], 'Interpreter', 'Latex')                
                 end
                 legend('location', 'east')
                 plot(t_curr, nonneg_curr(k, :), 'c', 'DisplayName', 'Trajectories')
@@ -82,11 +86,8 @@ if nargin == 3
     end       
     
     if ~out.dynamics.time_indep
-        if ~isempty(out.w)
-            peak_nonneg = out.func.nonneg(out.tp, out.xp, out.w);
-        else
-            peak_nonneg = out.func.nonneg(out.tp, out.xp);
-        end
+        peak_nonneg = out.func.nonneg(out.tp, out.xp, out.w, []);
+
         for k = 1:nplt
             subplot(nplt, 1, k)
             scatter(out.tp(1), peak_nonneg(k), 300, '*b', 'Linewidth', 2, 'HandleVisibility', 'Off')

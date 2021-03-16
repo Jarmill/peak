@@ -24,6 +24,8 @@ p_eval= zeros(np, npt);
 if isa(pt, 'sym')
     %interface with matlab's symbolic math toolbox
     p_eval = sym(p_eval);
+elseif isa(pt, 'mpol')
+    p_eval = p_eval * var(1);
 end
 
 %tricky to address relevant variables

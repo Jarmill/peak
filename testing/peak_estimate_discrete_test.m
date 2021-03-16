@@ -71,7 +71,7 @@ p_opt.dynamics.X = X;
 p_opt.dynamics.discrete = 1;
 
 Tmax_sim = 100;
-%p_opt.Tmax = Tmax_sim;
+p_opt.Tmax = Tmax_sim;
 
 p_opt.box = 4;
 p_opt.scale = 0;
@@ -97,12 +97,17 @@ mu = 1;
 
 Nsample = 100;
 % Nsample = 20;
-sampler = @() circle_sample(1)'*R0 + C0;
+s_opt = sampler_options;
+s_opt.sample.x = @() sphere_sample(1, 2)'*R0 + C0;
+% s_opt.sample.d = @() dmax * (2*rand() - 1);
+% s_opt.Nd = 1;
+s_opt.Tmax = Tmax_sim;
 
-out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
+out_sim = sampler(out.dynamics, Nsample, s_opt);
 
 if (out.optimal == 1)
-    out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
+    s_opt.sample.x = out.x0;
+    out_sim_peak = sampler(out.dynamics, 1, s_opt);
     nplot = nonneg_plot(out, out_sim, out_sim_peak);
     cplot = cost_plot(out, out_sim, out_sim_peak);
     splot = state_plot_2(out, out_sim, out_sim_peak);
