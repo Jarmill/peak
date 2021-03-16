@@ -20,6 +20,7 @@ The `peak_estimate` routine has two arguments: `p_opt` and `order`. The `order` 
       t:      time (default empty)
       x:      state
       w:      parametric uncertainty (default empty)
+      d:      time-dependent uncertainty (default empty)
 
   Tmax:       Maximum time (if var.t is not empty)
 
@@ -27,6 +28,9 @@ The `peak_estimate` routine has two arguments: `p_opt` and `order`. The `order` 
       f:      dynamics x' = f(t,x, w) over the space X.
                   Each entry is a polynomial                
       X:      over what space do the dynamics evolve
+
+      In case of switching in dynamics, f and X can be cells 
+              f = {f1, f2, f3, ....}, in spaces X = {X1, X2, X3, ...}
 
   obj:        Functions to maximize along trajectories
       Scalar:     Single function
@@ -41,7 +45,11 @@ The `peak_estimate` routine has two arguments: `p_opt` and `order`. The `order` 
   box:        Box containing valid region X, default to [-1, 1]^n
 ```
 
-Output is stored in the structure `out`. Trajectories are sampled by the function `switch_sampler` after defining a `sampler()` function to randomly generate a trajectory on X0. The visualizing functions `state_plot, cost_plot, nonneg_plot` illustrate properties of trajectories.
+Output is stored in the structure `out`. Trajectories are sampled by the function `sampler` 
+after filling in a `sampler_options` structure. The user-defined function `sampler_options.sampler.x()' 
+will randomly pick a point on X0, and sampler will return the trajectory. 
+
+The visualizing functions `state_plot, cost_plot, nonneg_plot` illustrate properties of trajectories.
 
 Examine and run `experiments/{pendulum_test, time_var_circ_2_1, sym_attractor_4_1, flow_half_safety}.m` as examples.
 
@@ -62,4 +70,4 @@ If you find this work useful, please cite:
 ```
 
 ## Contact
-For comments and questions please email [Jared Miller](mailto:miller.jare@northeastern.edu?Subject=CDCS).
+For comments and questions please email [Jared Miller](mailto:miller.jare@northeastern.edu?Subject=peak).
