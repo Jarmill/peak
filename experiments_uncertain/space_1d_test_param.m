@@ -135,16 +135,35 @@ end
 %% visualize
 
 Nsample = 80;
- Tmax_sim = 60;
-% Tmax_sim = 30;
+
+%  Tmax_sim = 60;
+Tmax_sim = 30;
 % Tmax_sim = 10;
 % Nsample = 50;
-sampler = @() (2*rand(3, 1)-1) .* [theta_max; omega_max; Wmax];
+% sampler = @() (2*rand(3, 1)-1) .* [theta_max; omega_max; Wmax];
 % 
-out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, 10, length(w));
+% out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, 10, length(w));
 % 
+
+s_opt = sampler_options;
+s_opt.sample.x = @() (2*rand(2, 1)-1) .* [theta_max; omega_max];
+s_opt.sample.w = @() (2*rand(2, 1)-1) .* Wmax;
+s_opt.Nd = 1;
+s_opt.Tmax = Tmax_sim;
+
+s_opt.parallel = 0;
+s_opt.mu = 0.4;
+
+out_sim = sampler(out.dynamics, Nsample, s_opt);
+
+
+
+
 if (out.optimal == 1)
-    out_sim_peak = switch_sampler(out.dynamics, [out.x0; out.w], 2, Tmax_sim, 10, length(w));
+%     out_sim_peak = switch_sampler(out.dynamics, [out.x0; out.w], 2, Tmax_sim, 10, length(w));
+    s_opt.sample.x = out.x0;
+    out_sim_peak = sampler(out.dynamics, 1, s_opt);
+    
     nplot = nonneg_plot(out, out_sim, out_sim_peak);
 
     splot = state_plot_2(out, out_sim, out_sim_peak);

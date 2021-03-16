@@ -125,12 +125,23 @@ end
 %Nsample = 100;
 Tmax_sim = 30;
 Nsample = 50;
-sampler = @() (2*rand(2, 1)-1) .* [theta_max; omega_max];
+% sampler = @() (2*rand(2, 1)-1) .* [theta_max; omega_max];
 
-out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim);
+s_opt = sampler_options;
+% s_opt.sample.x = @() circle_sample(1)'*R0 + C0;
+s_opt.sample.x = @() (2*rand(2, 1)-1) .* [theta_max; omega_max];
+s_opt.Tmax = Tmax_sim;
 
+
+% out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim);
+tic
+out_sim = sampler(out.dynamics, Nsample, s_opt);
+sample_time = toc;
 if (out.optimal == 1)
-    out_sim_peak = switch_sampler(out.dynamics, out.x0, 2, Tmax_sim);
+%     out_sim_peak = switch_sampler(out.dynamics, out.x0, 2, Tmax_sim);
+    s_opt.sample.x = out.x0;
+    out_sim_peak = sampler(out.dynamics, 2, s_opt);
+    
     nplot = nonneg_plot(out, out_sim, out_sim_peak);
 
     splot = state_plot_2(out, out_sim, out_sim_peak);
