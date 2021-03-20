@@ -97,14 +97,15 @@ x0 = C0;
 
 mu = 1;
 
-Nsample = 300;
+% Nsample = 300;
+Nsample = 20;
 
 s_opt = sampler_options;
 s_opt.sample.x = @() sphere_sample(1, 2)'*R0 + C0;
 s_opt.sample.d = @() dmax * (2*rand() -1 );
 s_opt.Tmax = Tmax_sim;
 s_opt.Nb = 1;
-s_opt.parallel = 1;
+s_opt.parallel = 0;
 
 s_opt.mu = 0.2;
 tic
@@ -149,6 +150,7 @@ if PLOT
     
     th_new_top = phi + theta_c + pi/2; 
     th_new_bot = pi - phi + theta_c + pi/2;
+    
     
     if th_new_top > pi
         th_new_top = th_new_top - 2*pi;
