@@ -69,10 +69,11 @@ mu = 1;
 Nsample = 20;
 sampler = @() circle_sample(1)'*R0 + C0;
 
-out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
+dynamics = struct('f', {@(x_in) eval(f, x, x_in)}, 'event', {@(t, x) all_event(t, x)});
+out_sim = switch_sampler(dynamics, sampler, Nsample, Tmax, 1, 0, @ode45);
 
 if (out.optimal == 1)
-    out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
+    out_sim_peak = switch_sampler(dynamics, out.x0, 1, Tmax);
     nplot = nonneg_plot(out, out_sim, out_sim_peak);
 
     splot = state_plot_2(out, out_sim, out_sim_peak);
@@ -82,3 +83,5 @@ else
     splot = state_plot_2(out, out_sim);
 %     splot = state_plot_N(out, out_sim);
 end
+
+
