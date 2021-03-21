@@ -5,9 +5,10 @@ rng(343, 'twister');
 
 
 
-SOLVE = 1;
+SOLVE = 0;
 SAMPLE = 0;
-PLOT = 1;
+PLOT_FLOW = 1;
+PLOT_DIST = 1;
 
 n = 2;
 order = 4;
@@ -19,6 +20,17 @@ f_func = @(x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2) ];
 Tmax = 5;
 BOX = 3;
 
+
+C0 = [1.5; 0];
+R0 = 0.4;
+theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1]
+% theta_c = 3*pi/2;
+Cu = [0; -0.75];
+Ru = 0.5;
+
+%plotting
+FS_title = 16;
+
 if SOLVE
 mset clear
 mset('yalmip',true);
@@ -29,19 +41,17 @@ mpol('x', 2, 1);
 f = Tmax*f_func(x);
 %initial set
 %C0 = [1.2; 0];
-C0 = [1.5; 0];
-R0 = 0.4;
+
 X0 = ((x(1)-C0(1))^2 + (x(2)-C0(2))^2 <= R0^2);
 
 %half-circle set
 
 % Cu = [0; -0.5];
-Cu = [0; -0.75];
-%Cu = [2.5; 0];
-Ru = 0.5;
+
 c1f = Ru^2 - (x(1) - Cu(1)).^2 - (x(2) - Cu(2)).^2;
 
-theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1]
+% theta_c = 3*pi/2;
+% theta_c = 
 w_c = [cos(theta_c); sin(theta_c)];
 c2f = w_c(1)*(x(1) - Cu(1)) + w_c(2) * (x(2) - Cu(2)); 
 
@@ -133,6 +143,7 @@ rankw = rank(Mw_1, 1e-3);
 xu_rec = double(mom(xu));
 xp_rec = double(mom(xp));
 x0_rec = double(mom(x0));
+tp_rec = Tmax*double(mom(tp));
 
 
 optimal_pt = all([rankp; rank0; rankw]==1);
@@ -141,23 +152,40 @@ end
 
 %% Sample trajectories
 if SAMPLE
-    Nsample = 20;
-    Tmax_sim = 3;
+    Nsample = 100;
+    Tmax_sim = 5;
 %     sampler = @() circle_sample(1)'*R0 + C0;
+
+    ode_options = odeset('Events',flow_event, 'MaxStep', 0.05, 'AbsTol', 1e-7, 'RelTol', 1e-6);;
 
     flow_event = @(t, x) box_event(t, x, BOX);
     sample_x = @() circle_sample(1)'*R0 + C0;    
 
     out_sim = cell(Nsample, 1);
     
+    %distance function
+    dist_func = @(x_in) aff_half_circ_dist(x_in, Ru, theta_c, Cu);
+%     peak_traj_dist = arrayfun(@(i) dist_func(out_sim_peak.x(i, :)'),...
+%         1:size(out_sim_peak.x, 1));
+    
     for i = 1:Nsample
-        x0_curr = sample_x();
-        curr_ode_options = odeset('Events',flow_event);
-        [time_curr, x_curr] = ode15s(@(t, x) f_func(x), [0, Tmax], x0_curr, curr_ode_options);
-        out_sim{i} = struct('t', time_curr, 'x', x_curr);
+        x0_curr = sample_x();        
+        [time_curr, x_curr] = ode15s(@(t, x) f_func(x), [0, Tmax], x0_curr, ode_options);
+        dist_curr = arrayfun(@(i) dist_func(x_curr(i, :)'),...
+            1:size(x_curr, 1))';
+        
+        out_sim{i} = struct('t', time_curr, 'x', x_curr, 'dist', dist_curr);
         
         %figure out coordinate transformation to evaluate true distances
     end
+    
+    if optimal_pt
+        [time_opt_traj, x_opt_traj] = ode15s(@(t, x) f_func(x), [0, Tmax], x0_rec, ode_options);
+        dist_opt_traj = arrayfun(@(i) dist_func(x_opt_traj(i, :)'),...
+            1:size(x_opt_traj, 1));
+        out_sim_peak = struct('t',   time_opt_traj, 'x', x_opt_traj, 'dist', dist_opt_traj);
+    end
+    
 %     s_opt = sampler_options;
 %     s_opt.sample.x = @() circle_sample(1)'*R0 + C0;    
 %     s_opt.Tmax = Tmax;
@@ -171,7 +199,7 @@ if SAMPLE
 end
 
 %% Plot flow output
-if PLOT
+if PLOT_FLOW
     
     %initial and unsafe sets
     theta = linspace(0, 2*pi, 100);
@@ -208,17 +236,122 @@ if PLOT
         end
     end
     
-    plot(X0(1, :), X0(2, :), 'k', 'Linewidth', 3)
-    patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
+    plot(X0(1, :), X0(2, :), 'k', 'Linewidth', 3, 'DisplayName', 'Initial Set')
+    patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none', 'DisplayName', 'Unsafe Set')
     
-    
-    
-xu_rec = double(mom(xu));
-xp_rec = double(mom(xp));
-x0_rec = double(mom(x0));
-    scatter(x0_rec(1), x0_rec(2), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
-    scatter(xp_rec(1), xp_rec(2), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
-    scatter(xu_rec(1), xu_rec(2), 200, 'sb', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);        
-         
+    %distance contour
+    x_dist_align = dist_contour(100, Ru, dist_rec);
 
+    theta_cf = theta_c - 3*pi/2;
+    Rot_mat = [cos(theta_cf) -sin(theta_cf); sin(theta_cf) cos(theta_cf)];
+    x_dist = Rot_mat*x_dist_align + Cu;
+    
+    plot(x_dist(1, :), x_dist(2, :), 'r', 'DisplayName', 'Distance Contour', 'LineWidth', 2)
+    
+    
+    
+    if optimal_pt
+        plot(out_sim_peak.x(:, 1), out_sim_peak.x(:, 2), 'b', 'DisplayName', 'Closest Traj.', 'LineWidth', 2);       
+        
+        scatter(x0_rec(1), x0_rec(2), 200, 'ob', 'DisplayName', 'Closest Initial', 'LineWidth', 2);        
+        scatter(xp_rec(1), xp_rec(2), 200, '*b', 'DisplayName', 'Closest Point', 'LineWidth', 2);        
+        scatter(xu_rec(1), xu_rec(2), 200, 'sb', 'DisplayName', 'Closest Unsafe', 'LineWidth', 2);        
+        
+        plot([xp_rec(1); xu_rec(1)], [xp_rec(2); xu_rec(2)], ':k', 'DisplayName', 'Closest Distance', 'Linewidth', 1.5)
+    end
+
+    
+    legend('location', 'northwest')
+    
+    xlim([-1, 2.5])
+    ylim([-2, 1.5])
+    xlabel('x_1')
+    ylabel('x_2')
+    axis square
+    
+    title_str = (['L_2 distance bound is ', num2str(dist_rec, 3)]);
+    title(title_str, 'FontSize' , FS_title)
+
+end
+
+%% Distance plot
+if PLOT_DIST
+    
+    
+    
+%     peak_traj_dist = arrayfun(@(i) half_circ_dist(out_sim_peak.x(i, :)'-Cu, Ru),...
+%         1:size(out_sim_peak.x, 1));
+%     
+    
+    figure(2)
+    clf
+    hold on
+    for i = 1:Nsample
+        if i == 1
+            plot(out_sim{i}.t, out_sim{i}.dist, 'c', 'DisplayName', 'Trajectories');
+        else
+            plot(out_sim{i}.t, out_sim{i}.dist, 'c', 'HandleVisibility', 'Off');
+        end
+    end
+    
+    plot(xlim, dist_rec*[1,1], '--r', 'LineWidth', 2 ,'DisplayName', 'Distance Bound');
+    
+    if optimal_pt
+        plot(out_sim_peak.t, out_sim_peak.dist, 'b', 'LineWidth', 2, 'DisplayName','Closest Traj.');
+        scatter(tp_rec, dist_rec, 300, '*b', 'LineWidth', 2,'DisplayName','Closest Point');
+    end
+    
+    xlabel('time')
+    ylabel('distance to unsafe set')
+    title('Distance to unsafe set along trajectories', 'FontSize' , FS_title)
+    legend('location', 'northwest')
+end
+
+
+function dist_out = half_circ_dist(x_in, R)
+    %return the L2 distance  between the point x_in and the half circle
+    %||x_in||^2 <= R^2 intersect x_in(2) <= 0.
+%     reshape(x_in, [], 1);
+    if x_in(2) >= 0
+        %flat region
+        if x_in(1) < -R
+            dist_out = hypot(x_in(1)+R, x_in(2));
+        elseif x_in(1) > R
+            dist_out = hypot(x_in(1)-R, x_in(2));
+        else
+            dist_out = x_in(2);
+        end
+    else
+        %circle region
+        dist_out = max(norm(x_in, 2)-R, 0);
+    end
+
+end
+
+function dist_out = aff_half_circ_dist(x_in, R, theta_c, Cu)
+
+    theta_cf = theta_c - 3*pi/2;
+    Rot_mat = [cos(theta_cf) -sin(theta_cf); sin(theta_cf) cos(theta_cf)];
+    x_aff = Rot_mat'*(x_in - Cu);
+    
+    dist_out = half_circ_dist(x_aff, R);
+
+end
+
+function x_dist = dist_contour(Ntheta, R, c)
+    %compute a contour at distance c away from the half-circle with N_theta
+    %sample points
+
+
+    theta_q1 = linspace(0, pi/2, Ntheta);
+    theta_q2 = linspace(pi/2, pi, Ntheta);
+    theta_q34 = linspace(pi, 2*pi, 2*Ntheta);
+
+    %contour level
+    
+
+    x_right = [c*cos(theta_q1)+R; c*sin(theta_q1)];
+    x_left = [c*cos(theta_q2)-R; c*sin(theta_q2)];
+    x_bottom = [(c+R)*cos(theta_q34); (c+R)*sin(theta_q34)];
+    x_dist = [x_right, x_left, x_bottom];
 end
