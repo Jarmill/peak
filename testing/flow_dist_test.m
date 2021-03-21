@@ -4,11 +4,12 @@
 rng(343, 'twister');
 
 
-
-SOLVE = 0;
+SOLVE_FEAS = 0;
+SOLVE_DIST = 0;
 SAMPLE = 0;
 PLOT_FLOW = 1;
-PLOT_DIST = 1;
+PLOT_DIST = 0;
+PLOT_NONNEG = 0;
 
 n = 2;
 order = 4;
@@ -23,19 +24,24 @@ BOX = 3;
 
 C0 = [1.5; 0];
 R0 = 0.4;
-theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1]
+% theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1]
 % theta_c = 3*pi/2;
+theta_c = 7*pi/4;
+% theta_c = pi;
 Cu = [0; -0.75];
 Ru = 0.5;
 
 %plotting
 FS_title = 16;
 
-if SOLVE
+if SOLVE_DIST
 mset clear
 mset('yalmip',true);
-mset(sdpsettings('solver', 'mosek'));
-
+% mset(sdpsettings('solver', 'mosek'));
+mset(sdpsettings('solver', 'mosek', 'mosek.MSK_DPAR_BASIS_TOL_S', 1e-9, ...
+                'mosek.MSK_DPAR_BASIS_TOL_X', 1e-9, 'mosek.MSK_DPAR_INTPNT_CO_TOL_MU_RED', 1e-10, ...
+                'mosek.MSK_DPAR_INTPNT_TOL_PATH', 1e-6));
+            
 mpol('x', 2, 1);
 % f = Tmax * [x(2); -x(1) + (1/3).* x(1).^3 - x(2) ];
 f = Tmax*f_func(x);
@@ -96,19 +102,30 @@ supp_con = [t0 == 0; t_occ*(1-t_occ)>=0; tp*(1-tp) >=0;
 y0 = mom(mmon([t0; x0], d));
 yp = mom(mmon([tp; xp], d));
 
+MOM_SUBS =0;
 
 v  = mmon([t_occ; x_occ], d);
 f_occ = subs_vars(f, x, x_occ);
 Ay = mom(diff(v, t_occ) + diff(v, x_occ)*f_occ); 
-Liou = Ay + (y0 - yp);
+if MOM_SUBS
+    Liou_con = yp == y0 + Ay;
+else
+    Liou = Ay + (y0 - yp);
+    Liou_con = Liou == 0;
+end
 
 %marginal between peak and wass
 ypx = mom(mmon(xp, d));
 ywx = mom(mmon(xw, d));
-Wmarg = ywx-ypx;
-
-
-mom_con = [Liou == 0; Wmarg == 0; mass(mu0)==1];
+if MOM_SUBS
+    Wmarg_con = (ywx==ypx); 
+%     mass_con = mass(mu0)==1;
+else
+    Wmarg = ywx-ypx;
+    Wmarg_con = Wmarg==0;   
+%     mass_con = mass(mu0)-1=0;
+end
+mom_con = [Liou_con; Wmarg_con; mass(mu0)==1];
 
 
 %objective
@@ -121,7 +138,7 @@ P = msdp(objective, ...
     mom_con, supp_con);
 
 %solve LMIP moment problem
-[status, obj] = msol(P);    
+[status, obj, m, dual_rec] = msol(P);    
 
 %% analyze solutions
 
@@ -150,16 +167,54 @@ optimal_pt = all([rankp; rank0; rankw]==1);
 
 end 
 
+%% Feasibility program (should probably be solved first)
+if SOLVE_FEAS
+    
+    %initial in X0
+    %terminal (peak) in Xu
+    u_cons_feas = subs_vars([c1f; c2f], x, xp);
+    
+    supp_con_feas = [t0 == 0; t_occ*(1-t_occ)>=0; tp*(1-tp) >=0;
+    x_occ.^2 <= BOX^2;
+    X0_con;
+    u_cons_feas >= 0];
+%     xw.^2 <= BOX^2; 
+%     u_cons >= 0;
+    
+    
+    mom_con_feas = [Liou_con; mass(mu0)==1];
+    objective_feas = min(mom(xp(2)));
+    
+    P_feas = msdp(objective_feas, ...
+    mom_con_feas, supp_con_feas);
+
+    %solve LMIP moment problem
+    [status_feas, obj_feas, m_feas, dual_rec_feas] = msol(P_feas);    
+
+%     M0_1_feas = M0(1:(n+2), 1:(n+2));
+%     Mp_1_feas = Mp(1:(n+2), 1:(n+2));
+% 
+%     rankp_feas = rank(Mp_1, 1e-3);
+%     rank0_feas = rank(M0_1, 1e-3);
+% 
+%     xp_feas_rec = double(mom(xp));
+%     x0_feas_rec = double(mom(x0));
+%     tp_feas_rec = Tmax*double(mom(tp));
+
+end
+
 %% Sample trajectories
 if SAMPLE
     Nsample = 100;
     Tmax_sim = 5;
 %     sampler = @() circle_sample(1)'*R0 + C0;
 
-    ode_options = odeset('Events',flow_event, 'MaxStep', 0.05, 'AbsTol', 1e-7, 'RelTol', 1e-6);;
-
+    
     flow_event = @(t, x) box_event(t, x, BOX);
     sample_x = @() circle_sample(1)'*R0 + C0;    
+
+    
+    ode_options = odeset('Events',flow_event, 'MaxStep', 0.05, 'AbsTol', 1e-7, 'RelTol', 1e-6);;
 
     out_sim = cell(Nsample, 1);
     
@@ -269,9 +324,13 @@ if PLOT_FLOW
     ylabel('x_2')
     axis square
     
-    title_str = (['L_2 distance bound is ', num2str(dist_rec, 3)]);
+    if status_feas == 0
+        %feasible program 
+        title_str = (['Unsafe, false L_2 distance bound is ', num2str(dist_rec, 3)]);
+    else    
+        title_str = (['L_2 distance bound is ', num2str(dist_rec, 3)]);        
+    end
     title(title_str, 'FontSize' , FS_title)
-
 end
 
 %% Distance plot
