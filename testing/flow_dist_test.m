@@ -4,12 +4,14 @@
 rng(343, 'twister');
 
 
-SOLVE_FEAS = 0;
-SOLVE_DIST = 0;
-SAMPLE = 0;
+%options 
+SOLVE_DIST = 1;
+SOLVE_FEAS = 1;
+
+SAMPLE = 1;
+
 PLOT_FLOW = 1;
-PLOT_DIST = 0;
-PLOT_NONNEG = 0;
+PLOT_DIST = 1;
 
 n = 2;
 order = 4;
@@ -21,13 +23,19 @@ f_func = @(x) [x(2); -x(1) + (1/3).* x(1).^3 - x(2) ];
 Tmax = 5;
 BOX = 3;
 
-
+%initial set
 C0 = [1.5; 0];
 R0 = 0.4;
-% theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1]
-% theta_c = 3*pi/2;
-theta_c = 7*pi/4;
+
+
+%unsafe set
+% theta_c = 3*pi/2;     %safe, bound = 0.18951
+% theta_c = 5*pi/4;      %safe, bound = 0.3184
+% theta_c = 7*pi/4;     %unsafe, bound = 4.6647\times 10^{-4}
 % theta_c = pi;
+
+theta_c = 13*pi/8;
+
 Cu = [0; -0.75];
 Ru = 0.5;
 
@@ -38,10 +46,11 @@ if SOLVE_DIST
 mset clear
 mset('yalmip',true);
 % mset(sdpsettings('solver', 'mosek'));
-mset(sdpsettings('solver', 'mosek', 'mosek.MSK_DPAR_BASIS_TOL_S', 1e-9, ...
-                'mosek.MSK_DPAR_BASIS_TOL_X', 1e-9, 'mosek.MSK_DPAR_INTPNT_CO_TOL_MU_RED', 1e-10, ...
-                'mosek.MSK_DPAR_INTPNT_TOL_PATH', 1e-6));
-            
+% mset(sdpsettings('solver', 'mosek', 'mosek.MSK_DPAR_BASIS_TOL_S', 1e-9, ...
+%                 'mosek.MSK_DPAR_BASIS_TOL_X', 1e-9, 'mosek.MSK_DPAR_INTPNT_CO_TOL_MU_RED', 1e-10, ...
+%                 'mosek.MSK_DPAR_INTPNT_TOL_PATH', 1e-6));
+%     
+mset(sdpsettings('solver', 'sedumi'))
 mpol('x', 2, 1);
 % f = Tmax * [x(2); -x(1) + (1/3).* x(1).^3 - x(2) ];
 f = Tmax*f_func(x);
