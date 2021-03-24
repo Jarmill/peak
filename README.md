@@ -54,20 +54,9 @@ The visualizing functions `state_plot, cost_plot, nonneg_plot` illustrate proper
 Examine and run `experiments_recovery/{pendulum_test, time_var_circ_2_1, sym_attractor_4_1, flow_half_safety}.m` as examples.
 
 ## Reference
-https://arxiv.org/abs/2009.06120 "Peak Estimation and Recovery with Occupation Measures"
+https://ieeexplore.ieee.org/document/9308943 "Peak Estimation Recovery and Safety Analysis"
 
-If you find this work useful, please cite:
 
-```
-@misc{miller2020peak,
-    title={Peak Estimation and Recovery with Occupation Measures},
-    author={Jared Miller and Didier Henrion and Mario Sznaier},
-    year={2020},
-    eprint={2009.06120},
-    archivePrefix={arXiv},
-    primaryClass={eess.SY}
-}
-```
 
 ## Contact
 For comments and questions please email [Jared Miller](mailto:miller.jare@northeastern.edu?Subject=peak).
