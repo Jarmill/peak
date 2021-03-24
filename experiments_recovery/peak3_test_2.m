@@ -4,7 +4,6 @@ mset clear
 rng(300, 'twister')
 
 %dynamics and support set
-%prajna and rantzer flow
 
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
@@ -65,18 +64,25 @@ mu = 1;
 
 % Nsample = 100;
 Nsample = 20;
-sampler = @() ball_sample(1, 3)'*R0 + C0;
+s_opt = sampler_options;
+s_opt.sample.x = @() ball_sample(1, 3)'*R0 + C0;
+s_opt.Tmax = Tmax_sim;
+s_opt.parallel = 0;
 
-out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
+out_sim = sampler(out.dynamics, Nsample, s_opt);
+
+% out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
 
 if (out.optimal == 1)
-    out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
+    s_opt.sample.x = out.x0;
+    out_sim_peak = sampler(out.dynamics, 1, s_opt);
+%     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
     nplot = nonneg_plot(out, out_sim, out_sim_peak);
 
-    splot = state_plot_3(out, out_sim, out_sim_peak);
+    s3plot = state_plot_3(out, out_sim, out_sim_peak);
     splot = state_plot_N(out, out_sim, out_sim_peak);
 else
     nplot = nonneg_plot(out, out_sim);
-    splot = state_plot_3(out, out_sim);
+    s3plot = state_plot_3(out, out_sim);
     splot = state_plot_N(out, out_sim);
 end
