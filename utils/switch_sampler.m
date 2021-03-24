@@ -64,7 +64,7 @@ for i = 1:Ns
         end
     end
 
-    if dynamics.discrete
+    if isfield(dynamics, 'discrete') && dynamics.discrete
         out_sim{i} = switch_sim_discrete(dynamics, x0, Tmax, Nw);    
     else
         out_sim{i} = switch_sim(dynamics, x0, Tmax, mu, Nw, odefcn);

@@ -19,7 +19,7 @@ X0 = [1.5; 0] + circ*0.5;
 Xu = [-1; -1] + circ*0.4;
 %p(x) = -(x+1)^2 + (y+1)^2
 
-figure(1)
+figure(3)
 hold on
 streamline(x, y, xdot, ydot, x, y)
 plot(X0(1, :), X0(2, :), 'k', 'Linewidth', 3)

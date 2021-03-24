@@ -34,7 +34,11 @@ if iscell(dynamics.f)
 else
     nsys = 1;
     dynamics.f = {dynamics.f};    
-    dynamics.event = @(t,x) deal(1, 1, 0);
+    if isfield(dynamics, 'event')
+        dynamics.event = {dynamics.event};
+    else
+        dynamics.event = {@(t,x) deal(1, 1, 0)};
+    end
 end
 
 %main solving loop

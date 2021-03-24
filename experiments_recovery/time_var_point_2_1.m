@@ -20,7 +20,7 @@ X = [];
 
 %initial set
 C0 = [0; 1];
-sampler = C0;
+% sampler = C0;
 X0 = (x==C0);
 %objective to maximize
 objective = x(1);
@@ -69,13 +69,20 @@ Nsample = 1;
 
 % Nsample = 20;
 
-out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
+s_opt = sampler_options;
+s_opt.sample.x = C0;
+s_opt.Tmax = Tmax_sim;
+s_opt.parallel = 0;
+out_sim = sampler(out.dynamics, Nsample, s_opt);
+
+
+% out_sim = switch_sampler(out.dynamics, sampler, Nsample, Tmax_sim, mu, 0, @ode45);
 
 if (out.optimal == 1)
-    out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
-    nplot = nonneg_plot(out, out_sim, out_sim_peak);
-    cplot = cost_plot(out, out_sim, out_sim_peak);
-    splot = state_plot_2(out,  out_sim, out_sim_peak);
+%     out_sim_peak = switch_sampler(out.dynamics, out.x0, 1, Tmax_sim);
+    nplot = nonneg_plot(out, out_sim, out_sim);
+    cplot = cost_plot(out, out_sim, out_sim);
+    splot = state_plot_2(out,  out_sim, out_sim);
 else
     nplot = nonneg_plot(out, out_sim);
     cplot = cost_plot(out, out_sim);

@@ -43,8 +43,9 @@ if iscell(dynamics.f)
     nsys = length(dynamics.f);    
 else
     nsys = 1;
-    dynamics.f = {dynamics.f};    
-    dynamics.event = @(t,x) deal(1, 1, 0);
+    dynamics.f = {dynamics.f}; 
+%     event_all = @(t,x) deal(1, 1, 0);
+%     dynamics.event = {event_all};
 end
 
 %support in space and time

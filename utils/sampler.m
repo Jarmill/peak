@@ -56,7 +56,7 @@ parfor i = 1:Np
     
     
     %old code
-    if dynamics.discrete
+    if isfield(dynamics, 'discrete') && dynamics.discrete
         out_sim{i} = sampler_discrete(dynamics, x0, w0, opts);
     else
         out_sim{i} = sampler_cont(dynamics, x0, w0, opts);
