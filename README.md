@@ -51,7 +51,7 @@ will randomly pick a point on X0, and sampler will return the trajectory.
 
 The visualizing functions `state_plot, cost_plot, nonneg_plot` illustrate properties of trajectories.
 
-Examine and run `experiments/{pendulum_test, time_var_circ_2_1, sym_attractor_4_1, flow_half_safety}.m` as examples.
+Examine and run `experiments_recovery/{pendulum_test, time_var_circ_2_1, sym_attractor_4_1, flow_half_safety}.m` as examples.
 
 ## Reference
 https://arxiv.org/abs/2009.06120 "Peak Estimation and Recovery with Occupation Measures"
