@@ -1,0 +1,3 @@
+[submodule "gloptipoly3_mod"]
+	path = gloptipoly3_mod
+	url = https://github.com/Jarmill/gloptipoly3_mod.git
