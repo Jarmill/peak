@@ -56,6 +56,7 @@ Examine and run `experiments_recovery/{pendulum_test, time_var_circ_2_1, sym_att
 ## Reference
 https://ieeexplore.ieee.org/document/9308943 "Peak Estimation Recovery and Safety Analysis"
 
+https://arxiv.org/abs/2103.13017 "Peak Estimation for Uncertain and Switched Systems"
 
 
 ## Contact
