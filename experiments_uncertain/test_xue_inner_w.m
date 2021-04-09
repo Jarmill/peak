@@ -4,7 +4,7 @@ mset clear
 rng(300, 'twister')
 
 %dynamics and support set
-%prajna and rantzer flow
+%modified inner RoA Xue flow
 
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol

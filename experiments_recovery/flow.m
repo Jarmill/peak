@@ -43,7 +43,7 @@ p_opt.dynamics.X = X;
 p_opt.dynamics.discrete = 0;
 
 Tmax_sim = 10;
-%p_opt.Tmax = Tmax_sim;
+p_opt.Tmax = Tmax_sim;
 
 p_opt.box = 4;
 p_opt.scale = 0;
@@ -52,7 +52,7 @@ p_opt.scale = 0;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 4;
+order = 1;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val;
 

@@ -26,8 +26,8 @@ if SOLVE
     mset('yalmip',true);
     mset(sdpsettings('solver', 'mosek'));
 
-    %d = 2*2;  %degree of relaxation
-    d0 = 2;
+    d0 = 5;  %degree of relaxation
+%     d0 = 2;
     %d0 = input('order of relaxation ='); d = 2*d0;
     %d0 = 10;
     d = 2*d0;

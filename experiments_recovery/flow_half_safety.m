@@ -5,7 +5,7 @@ rng(300, 'twister')
 
 %dynamics and support set
 %prajna and rantzer flow
-SOLVE = 1;
+SOLVE = 0;
 PLOT = 1;
 
 if SOLVE
@@ -131,7 +131,7 @@ if PLOT
     %sample from X0 
     rng(33, 'twister')
 
-    Xsample = C0 + circle_sample(Nsample)' * R0;
+%     Xsample = C0 + circle_sample(Nsample)' * R0;
             
     if theta_c > pi
         theta_c = theta_c - 2 * pi;
@@ -167,6 +167,9 @@ if PLOT
     clf
     hold on
     
+    plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
+    plot(Xmargin_corner(1, :), Xmargin_corner(2, :), 'r--', 'Linewidth', 3,   'HandleVisibility','off')
+
     
     for i = 1:Nsample
         if i == 1
@@ -180,21 +183,13 @@ if PLOT
     patch(Xu(1, :), Xu(2, :), 'r', 'Linewidth', 3, 'EdgeColor', 'none')
     
     
-    plot(Xmargin(1, :), Xmargin(2, :), 'r--', 'Linewidth', 3)
-    plot(Xmargin_corner(1, :), Xmargin_corner(2, :), 'r--', 'Linewidth', 3,   'HandleVisibility','off')
-    
-%     hlines_c0 = streamline(x, y, xdot, ydot, C0(1), C0(2));
-%     hlines = streamline(x, y, xdot, ydot, Xsample(1, :), Xsample(2, :));
-    
-%     set(hlines_c0, 'Color', 'c')
-%     set(hlines, 'Color', 'c', 'HandleVisibility','off')
-    
-%     if rank0 == 1 && rankp == 1
+
     syms y [2 1]
     vy = out.func.vval(0, y, []) - out.peak_val;
 
-    fimplicit(vy, [xlim, ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
-        
+%     fimplicit(vy, [xlim, ylim], ':k', 'DisplayName', 'Invariant Set', 'LineWidth', 3);
+     
+
     if out.optimal
         %global optimum was found
         %hlines_p = streamline(x, y, xdot, ydot, x0_out(1), x0_out(2));

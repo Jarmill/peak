@@ -30,7 +30,7 @@ if SOLVE
     mset(sdpsettings('solver', 'mosek'));
 
     %d = 2*2;  %degree of relaxation
-    d0 = 4;
+    d0 = 3;
     %d0 = input('order of relaxation ='); d = 2*d0;
     %d0 = 10;
     d = 2*d0;

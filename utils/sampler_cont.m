@@ -102,7 +102,9 @@ while time_total < opts.Tmax
     time_track_trunc = min(time_track, opts.Tmax - time_total);
     
     %simulate the current system
-    curr_ode_options = odeset('Events',curr_event);
+%     curr_ode_options = odeset('Events',curr_event);
+      curr_ode_options =   odeset('Events',curr_event, 'RelTol', 1e-7, ...
+                                      'AbsTol', 1e-8, 'MaxStep', 0.01);
     
     [time_curr, x_curr] = opts.odefcn(curr_f, [0, time_track_trunc], x0_curr, curr_ode_options);
     
