@@ -93,7 +93,7 @@ end
 if isempty(d_curr)
     d_accum = [d_accum; zeros(size(x_curr, 1), 0)];
 else
-    %not sur4e about this line
+    %not sure about this line
     d_accum = [d_accum; d_curr'];  %general
 end
 

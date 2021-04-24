@@ -1,6 +1,6 @@
 function [X] = sphere_sample(N, d)
-%BALL_SAMPLE Randomly sample a point from a unit d-dimensional sphere
-%3d sphere is a 2-sphere. S^(d-1)
+%BALL_SAMPLE Randomly sample N points from a unit d-dimensional sphere
+%d=3 sphere is a 2-sphere. S^(d-1)
 %
 %Input:
 %   N:  Number of points to sample

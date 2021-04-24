@@ -70,7 +70,7 @@ Nsample = 20;
 sampler = @() circle_sample(1)'*R0 + C0;
 
 dynamics = struct('f', {@(x_in) eval(f, x, x_in)}, 'event', {@(t, x) all_event(t, x)});
-out_sim = switch_sampler(dynamics, sampler, Nsample, Tmax, 1, 0, @ode45);
+out_sim = switch_sampler(dynamics, sampler, Nsample, Tmax_sim, 1, 0, @ode45);
 
 if (out.optimal == 1)
     out_sim_peak = switch_sampler(dynamics, out.x0, 1, Tmax);
