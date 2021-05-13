@@ -2,8 +2,8 @@
 %clear
 SOLVE = 0;
 SAMPLE = 0;
-PLOT = 0;
-V_PLOT = 1;
+PLOT = 1;
+V_PLOT = 0;
 
 %% Setup
 mset clear
@@ -124,7 +124,7 @@ if PLOT
         end
     end
     
-    if BOUNDS
+    
         if RECOVER
             
             plot(xlim, [1, 1]*-peak_val(end), ':r', 'LineWidth', 2)
@@ -132,14 +132,16 @@ if PLOT
 
             scatter(out{end}.x0(1), out{end}.x0(2), 200, 'ob', 'DisplayName', 'Peak Initial', 'LineWidth', 2);        
             scatter(out{end}.xp(1), out{end}.xp(2), 200, '*b', 'DisplayName', 'Peak Achieved', 'LineWidth', 2);  
-        else
+        end
+        if BOUNDS
             for i = 1:length(peak_val)
                 plot(xlim, [1, 1]*-peak_val(i), ':r', 'LineWidth', 2)
             end
         end
-    else
-        quiver(-0.25, 0.75, 0, -2, 'r', 'LineWidth', 2)
-    end
+%     else
+%         quiver(-0.25, 0.75, 0, -2, 'r', 'LineWidth', 2)
+quiver(-0.3, 0.85, 0, -1.5, 'r', 'LineWidth', 2)
+%     end
     
     xlim([-0.5, 3])
     ylim([-3, 1.5])

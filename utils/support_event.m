@@ -1,5 +1,5 @@
 function [event_eval, terminal, direction] = support_event(t, x, supp_eval, Tmin, Tmax)
-%SUPPORT_EVENT Event function for switch_sim used when simulating systems
+%SUPPORT_EVENT Event function for sampler used when simulating systems
 %   return the event function eventFcn. Yes this is tricky
 
 

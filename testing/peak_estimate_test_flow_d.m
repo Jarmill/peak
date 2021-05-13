@@ -18,10 +18,12 @@ Xsupp = [];
 
 %dynamics
 %in principle, d is in a box [0,1]
-dmax = 0.4;
+% dmax = 0.4;
+dmax = 0.3;
 draw = dmax*(2*d - 1);
 
-f = [x(2); -x(1) - x(2) + (1/3).* x(1).^3 + draw];
+% f = [x(2); -x(1) - x(2) + (1/3).* x(1).^3 + draw];
+f = [x(2); -(0.85+dmax*d)*x(1) - x(2) + (1/3).* x(1).^3];
 X = [];
 
 

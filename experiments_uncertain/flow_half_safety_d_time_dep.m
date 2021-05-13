@@ -13,6 +13,7 @@ if SOLVE
 
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
+mpol('t', 1, 1);
 mpol('x', 2, 1);
 mpol('d', 1, 1);
 
@@ -23,6 +24,7 @@ Xsupp = [];
 
 %dynamics
 f = [x(2); -x(1)*(1+ draw) + (1/3).* x(1).^3 - x(2)*(1+ draw)];
+% f = [x(2); -x(1)*(1+ draw) + (1/3).* x(1).^3 - x(2)];
 X = [];
 
 
@@ -63,6 +65,7 @@ objective = [c1f; c2f];
 %objective = -x(2) - x(1);
 %
 p_opt = peak_options;
+p_opt.var.t = t;
 p_opt.var.x = x;
 p_opt.var.d = d;
 
@@ -76,7 +79,7 @@ p_opt.dynamics.X = X;
 p_opt.dynamics.discrete = 0;
 
 Tmax_sim = 5;
-%p_opt.Tmax = Tmax_sim;
+p_opt.Tmax = Tmax_sim;
 
 p_opt.box = 3;
 p_opt.scale = 0;
@@ -85,7 +88,7 @@ p_opt.scale = 0;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 2;
+order = 4;
 out = peak_estimate(p_opt, order);
 peak_val = out.peak_val
 end

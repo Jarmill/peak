@@ -10,8 +10,9 @@ PLOT = 1;
 %mu_van = 1;
 
 beta = 0.4;
-gamma = 0.035 + 0.005;
-I_max = 0.1;
+% gamma = 0.035 + 0.005;
+gamma = 0.1;
+I_max = 0.2;
 
 
 %test a sample trajectory
@@ -202,7 +203,7 @@ if PLOT
         
         legend({'Initial Set', 'Upper Limit', 'Trajectories', 'Peak Traj.'}, 'location', 'northeast')
         
-        title(['Peak Infection Rate = ', num2str(obj, 3), ' at time = ', num2str(tp_out, 3)])
+        title(['Peak Infection Rate = ', num2str(obj, 3), ' at time = ', num2str(tp_out, 4)],'FontSize', 16)
     else
         %global optimum not certified
         legend({'Initial Set', 'Upper Limit', 'Trajectories'}, 'location', 'northeast')        

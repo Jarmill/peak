@@ -14,7 +14,5 @@ U = randn(N, d);
 normU = sqrt(sum(U.^2, 2));
 X = U ./ normU;
 
-
-
 end
 

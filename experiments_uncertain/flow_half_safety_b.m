@@ -5,24 +5,35 @@ rng(300, 'twister')
 
 %dynamics and support set
 %prajna and rantzer flow
-SOLVE = 1;
-SAMPLE = 0;
+SOLVE = 0;
+SAMPLE = 1;
 PLOT = 0;
+PLOT_NONNEG = 0;
 
 if SOLVE
 
 %go back to functions
 %and/or figure out how to extract monomials and powers from mpol
 mpol('x', 2, 1);
-mpol('d', 1, 1);
+mpol('b', 1, 1);
 
 dmax = 0.15;
-draw = dmax * d;
+draw = dmax * (2*b-1);
 %support
+
+
+%% dynamics
+% f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+% f = [x(2); -x(1) + ((1+draw)/3).* x(1).^3 - x(2)];
+% f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)*(1+draw)];
+
+f = [x(2); -x(1)*(1+draw) + (1/3).* x(1).^3 - x(2)];
+
+% f = [x(2); -x(1) + (1/3).* x(1).^3 - x(2)];
+
+%% support
 Xsupp = [];
 
-%dynamics
-f = [x(2); -x(1)*(1+ draw) + (1/3).* x(1).^3 - x(2)*(1+ draw)];
 X = [];
 
 
@@ -59,14 +70,15 @@ w_c = [cos(theta_c); sin(theta_c)];
 c2f = w_c(1)*(x(1) - Cu(1)) + w_c(2) * (x(2) - Cu(2)); 
 
 %objective to maximize
-objective = [c1f; c2f];
+% objective = [c1f; c2f];
+objective = -x(2);
 %objective = -x(2) - x(1);
 %
 p_opt = peak_options;
 p_opt.var.x = x;
-p_opt.var.d = d;
+p_opt.var.b = b;
 
-p_opt.disturb = (d^2 <= 1);
+% p_opt.disturb = (d^2 <= 1);
 p_opt.state_supp = Xsupp;
 p_opt.state_init = X0;
 
@@ -85,10 +97,12 @@ p_opt.scale = 0;
 p_opt.rank_tol = 4e-3;
 p_opt.obj = objective;
 
-order = 2;
+order = 4;
+% order = 6;
 out = peak_estimate(p_opt, order);
-peak_val = out.peak_val
+peak_val = out.peak_val;
 end
+fprintf('Safety Margin = %0.3d\n', peak_val)
 
 %% now do plots
 %there is something wrong with the definition of v. why?
@@ -98,16 +112,16 @@ x0 = C0;
 
 % Nsample = 300;
 % Nsample = 150;
-Nsample = 20;
+Nsample = 100;
 
 s_opt = sampler_options;
 s_opt.sample.x = @() sphere_sample(1, 2)'*R0 + C0;
-s_opt.sample.d = @() dmax * (2*rand() -1 );
+% s_opt.sample.d = @() dmax * (2*rand() -1 );
 s_opt.Tmax = Tmax_sim;
-s_opt.Nd = 1;
+s_opt.Nb = 1;
 s_opt.parallel = 1;
 
-s_opt.mu = 0.2;
+s_opt.mu = 0.1;
 tic
 out_sim = sampler(out.dynamics, Nsample, s_opt);
 sample_time = toc;
@@ -117,10 +131,12 @@ sample_time = toc;
 
 end
 
+if PLOT_NONNEG 
+    nplot = nonneg_plot(out, out_sim);
+end
+
 if PLOT
     %quiver(x, y, xdot, ydot)
-    
-    nplot = nonneg_plot(out, out_sim);
 
     %initial and unsafe sets
     theta = linspace(0, 2*pi, 100);
