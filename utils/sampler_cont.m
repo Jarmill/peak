@@ -30,14 +30,20 @@ function [out_sim] = sampler_cont(dynamics, x0, w0, opts)
 
 %time range of states
 if iscell(dynamics.f)
-    nsys = length(dynamics.f);    
+    nsys = length(dynamics.f);  
+    if ~isfield(dynamics, 'event') || isempty(dynamics.event)
+        dynamics.event = cell(nsys, 1);
+        for i = 1:nsys
+            dynamics.event{i} = @blank_event;
+        end
+    end
 else
     nsys = 1;
     dynamics.f = {dynamics.f};    
-    if isfield(dynamics, 'event')
+    if isfield(dynamics, 'event') && ~isempty(dynamics.event)
         dynamics.event = {dynamics.event};
     else
-        dynamics.event = {@(t,x) deal(1, 1, 0)};
+        dynamics.event = {blank_event};
     end
 end
 
@@ -151,7 +157,9 @@ out_sim.break_sys = system_choice;
 out_sim.break_time = time_breaks;
 out_sim.break_index = time_index;
 out_sim.Tmax = opts.Tmax;
-out_sim.cost = dynamics.cost(x_accum');
+if isfield(dynamics, 'cost')    
+    out_sim.cost = dynamics.cost(x_accum');
+end
 %Evaluate (hopefully) nonnegative functions along trajectories
 if isfield(dynamics, 'nonneg')    
     out_sim.nonneg = dynamics.nonneg(time_accum', x_accum', w0, d_accum');
