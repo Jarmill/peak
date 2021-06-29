@@ -1,5 +1,5 @@
 function [event_eval, terminal, direction] = blank_event(t, x, w)
-%BLANK_EVENT
+%BLANK_EVENT an event function that is always true (trivial)
 
     %stop integrating when the system falls outside support
     %

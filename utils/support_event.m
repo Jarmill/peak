@@ -5,8 +5,11 @@ function [event_eval, terminal, direction] = support_event(t, x, supp_eval, Tmin
 
 %the event function for support for a system
     %this assumes that t = 0...Tmax-Tmin as with ode45.
-
+if nargin < 5
+    time_supp = ones(size(t));
+else
     time_supp =  (t + Tmin <= Tmax);
+end
     Npt = size(x, 2);
     event_eval = zeros(1, Npt);
     for i = 1:Npt
