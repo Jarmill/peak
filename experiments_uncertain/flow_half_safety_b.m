@@ -5,9 +5,9 @@ rng(300, 'twister')
 
 %dynamics and support set
 %prajna and rantzer flow
-SOLVE = 0;
+SOLVE = 1;
 SAMPLE = 1;
-PLOT = 0;
+PLOT = 1;
 PLOT_NONNEG = 0;
 
 if SOLVE

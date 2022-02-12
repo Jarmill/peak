@@ -7,7 +7,8 @@ PARAM = 2;
 PLOT = 1;
 
 beta0 = 0.4;
-gamma0 = 0.04;
+% gamma0 = 0.04;
+gamma0 = 0.1;
 I_max = 0.1;
 
 beta_tol = 0.2;  % 20% uncertainty in infection rate

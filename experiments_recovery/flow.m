@@ -65,8 +65,8 @@ x0 = C0;
 
 mu = 1;
 
-% Nsample = 100;
-Nsample = 20;
+Nsample = 100;
+% Nsample = 20;
 sampler = @() circle_sample(1)'*R0 + C0;
 
 dynamics = struct('f', {@(x_in) eval(f, x, x_in)}, 'event', {@(t, x) all_event(t, x)});

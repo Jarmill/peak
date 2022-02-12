@@ -746,6 +746,7 @@ end
 out.dynamics = struct;
 out.dynamics.f = out.func.fval;
 % out.dynamics.f_all = out.func.fval_all;
+% out.dynamics.v = out.func.vval;
 out.dynamics.event = out.func.event;
 out.dynamics.discrete = options.dynamics.discrete;
 out.dynamics.time_indep = TIME_INDEP;
